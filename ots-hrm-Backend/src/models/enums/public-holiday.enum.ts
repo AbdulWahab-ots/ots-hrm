@@ -1,0 +1,8 @@
+export enum HolidayType {
+    NATIONAL = 'NATIONAL',
+    RELIGIOUS = 'RELIGIOUS',
+    CULTURAL = 'CULTURAL',
+    REGIONAL = 'REGIONAL',
+    COMPANY = 'COMPANY',
+    OTHER = 'OTHER'
+}

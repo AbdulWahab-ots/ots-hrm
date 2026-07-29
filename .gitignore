@@ -1,0 +1,6 @@
+ots-hrm-Backend/.env
+ots-hrm-frontend/.env.local
+ots-hrm-Backend/node_modules/
+ots-hrm-frontend/node_modules/
+ots-hrm-frontend/.next/
+dist/

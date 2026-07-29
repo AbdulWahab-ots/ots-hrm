@@ -1,0 +1,1152 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Geist design tokens — light theme defaults, dark theme overrides below.
+   Legacy variable names are kept so existing classes/styles keep working;
+   their values now resolve to the Geist palette. Tailwind's default color
+   scale (gray/blue/red/green/amber/teal/purple/pink) is also remapped to
+   the Geist scale via the @theme block, so plain utility classes like
+   `text-gray-500` or `bg-blue-600` inherit the system automatically.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Geist core */
+  --g-primary: #171717;
+  --g-secondary: #4d4d4d;
+  --g-tertiary: #006bff;
+  --g-neutral: #f2f2f2;
+  --g-background-100: #ffffff;
+  --g-background-200: #fafafa;
+
+  --g-gray-100: #f2f2f2;
+  --g-gray-200: #ebebeb;
+  --g-gray-300: #e6e6e6;
+  --g-gray-400: #eaeaea;
+  --g-gray-500: #c9c9c9;
+  --g-gray-600: #a8a8a8;
+  --g-gray-700: #8f8f8f;
+  --g-gray-800: #7d7d7d;
+  --g-gray-900: #4d4d4d;
+  --g-gray-1000: #171717;
+
+  --g-gray-alpha-100: #0000000d;
+  --g-gray-alpha-200: #00000015;
+  --g-gray-alpha-300: #0000001a;
+  --g-gray-alpha-400: #00000014;
+  --g-gray-alpha-500: #00000036;
+  --g-gray-alpha-600: #0000003d;
+  --g-gray-alpha-700: #00000070;
+  --g-gray-alpha-800: #00000082;
+  --g-gray-alpha-900: #000000b3;
+  --g-gray-alpha-1000: #000000e8;
+
+  --g-blue-100: #f0f7ff;
+  --g-blue-200: #e9f4ff;
+  --g-blue-300: #dfefff;
+  --g-blue-400: #cae7ff;
+  --g-blue-500: #94ccff;
+  --g-blue-600: #48aeff;
+  --g-blue-700: #006bff;
+  --g-blue-800: #0059ec;
+  --g-blue-900: #005ff2;
+  --g-blue-1000: #002359;
+
+  --g-red-100: #ffeeef;
+  --g-red-200: #ffe8ea;
+  --g-red-300: #ffe3e4;
+  --g-red-400: #ffd7d6;
+  --g-red-500: #ffb1b3;
+  --g-red-600: #ff676d;
+  --g-red-700: #fc0035;
+  --g-red-800: #ea001d;
+  --g-red-900: #d8001b;
+  --g-red-1000: #47000c;
+
+  --g-amber-100: #fff6de;
+  --g-amber-200: #fff4cf;
+  --g-amber-300: #fff1c1;
+  --g-amber-400: #ffdc73;
+  --g-amber-500: #ffc543;
+  --g-amber-600: #ffa600;
+  --g-amber-700: #ffae00;
+  --g-amber-800: #ff9300;
+  --g-amber-900: #aa4d00;
+  --g-amber-1000: #561900;
+
+  --g-green-100: #ecfdec;
+  --g-green-200: #e5fce7;
+  --g-green-300: #d3fad1;
+  --g-green-400: #b9f5bc;
+  --g-green-500: #82eb8d;
+  --g-green-600: #4ce15e;
+  --g-green-700: #28a948;
+  --g-green-800: #279141;
+  --g-green-900: #107d32;
+  --g-green-1000: #003a00;
+
+  --g-teal-100: #defffb;
+  --g-teal-200: #ddfef6;
+  --g-teal-300: #ccf9f1;
+  --g-teal-400: #b1f7ec;
+  --g-teal-500: #52f0db;
+  --g-teal-600: #00e3c4;
+  --g-teal-700: #00ac96;
+  --g-teal-800: #00927f;
+  --g-teal-900: #007f70;
+  --g-teal-1000: #003f34;
+
+  --g-purple-100: #faf0ff;
+  --g-purple-200: #f9f0ff;
+  --g-purple-300: #f6e8ff;
+  --g-purple-400: #f2d9ff;
+  --g-purple-500: #dfa7ff;
+  --g-purple-600: #c979ff;
+  --g-purple-700: #a000f8;
+  --g-purple-800: #8500d1;
+  --g-purple-900: #7d00cc;
+  --g-purple-1000: #2f004e;
+
+  --g-pink-100: #ffe8f6;
+  --g-pink-200: #ffe8f3;
+  --g-pink-300: #ffdfeb;
+  --g-pink-400: #ffd3e1;
+  --g-pink-500: #fdb3cc;
+  --g-pink-600: #f97ea7;
+  --g-pink-700: #f22782;
+  --g-pink-800: #e4106e;
+  --g-pink-900: #c41562;
+  --g-pink-1000: #460523;
+
+  --g-radius-sm: 6px;
+  --g-radius-md: 12px;
+  --g-radius-lg: 16px;
+  --g-radius-full: 9999px;
+
+  --g-shadow-card: 0 2px 2px rgba(0, 0, 0, 0.04);
+  --g-shadow-menu: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --g-shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --g-focus-ring: 0 0 0 2px var(--g-background-100), 0 0 0 4px var(--g-blue-700);
+  --g-ease-out: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  /* Modal/drawer scrim — intentionally NOT theme-mapped. Overlays dim the
+     page with a dark tint in both light and dark mode; gray-alpha-* flips
+     to a white-based tint in dark mode (correct for borders, wrong here). */
+  --g-overlay: rgba(0, 0, 0, 0.5);
+
+  /* Attendance heatmap — ORANGE 5-step ramp (GitHub-contributions style).
+     level-0 = no data / non-working day (muted neutral); 1..4 = increasing
+     presence intensity. Light-mode ramp tuned for contrast on white surfaces;
+     the dark override below re-tunes for near-black surfaces. Brand orange
+     (#e1511e) sits at level-3. Also: a subtle outline used for the Absent tile. */
+  --g-heat-0: #ededed;
+  --g-heat-1: #ffe0cc;
+  --g-heat-2: #ffb180;
+  --g-heat-3: #f2792f;
+  --g-heat-4: #c23d10;
+  --g-heat-absent-outline: var(--g-red-500);
+
+  /* ---- Legacy variable names, remapped onto the Geist palette ---- */
+  --primary-bg-theme: var(--g-background-100);
+  --secondary-bg-theme: var(--g-background-200);
+  --General-Surface-Primary: var(--g-blue-100);
+  --Primary-Alpha-45: color-mix(in srgb, var(--g-blue-700) 45%, transparent);
+  --Primary-Alpha-50: color-mix(in srgb, var(--g-blue-700) 50%, transparent);
+  --Primary-Alpha-20: color-mix(in srgb, var(--g-blue-700) 20%, transparent);
+
+  --primary-navy-blue: var(--g-blue-700);
+  --primary-blue-400: var(--g-blue-700);
+  --primary-blue-500: var(--g-blue-800);
+  --primary-gray-900: var(--g-gray-1000);
+
+  --primary-dark-gray: var(--g-gray-1000);
+  --tertiary-dark-gray: var(--g-gray-900);
+  --quaternary-dark-gray: var(--g-gray-800);
+  --primary-light-gray: var(--g-gray-900);
+  --secondary-light-gray: var(--g-gray-500);
+  --general-extra-light: var(--g-gray-800);
+  --general-subtle-light: var(--g-gray-700);
+  --profile-border: var(--g-blue-100);
+  --chevron-color: var(--g-gray-800);
+  --border-light: var(--g-gray-alpha-400);
+  --chevron-bg: var(--g-blue-100);
+  --drag-disable: var(--g-gray-alpha-500);
+
+  --error-50: var(--g-red-100);
+  --error-500: var(--g-red-700);
+  --error-400: var(--g-red-600);
+  --error-100: var(--g-red-200);
+
+  --surface-secondary: var(--g-gray-1000);
+  --genrel-text-light: var(--g-gray-900);
+  --text-dark: var(--g-gray-900);
+  --text-light: var(--g-gray-900);
+  --primary-alpha-5: var(--g-gray-alpha-100);
+
+  --genrel-light-stroke: var(--g-gray-alpha-400);
+  --secondary-alpha-10: var(--g-gray-alpha-200);
+  --secondary-alpha-5: var(--g-gray-alpha-100);
+  --foreground: var(--g-gray-1000);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --g-primary: #ededed;
+  --g-secondary: #a0a0a0;
+  --g-tertiary: #006efe;
+  --g-neutral: #1a1a1a;
+  --g-background-100: #000000;
+  --g-background-200: #0a0a0a;
+
+  --g-gray-100: #1a1a1a;
+  --g-gray-200: #1f1f1f;
+  --g-gray-300: #292929;
+  --g-gray-400: #2e2e2e;
+  --g-gray-500: #454545;
+  --g-gray-600: #878787;
+  --g-gray-700: #8f8f8f;
+  --g-gray-800: #7d7d7d;
+  --g-gray-900: #a0a0a0;
+  --g-gray-1000: #ededed;
+
+  --g-gray-alpha-100: #ffffff12;
+  --g-gray-alpha-200: #ffffff17;
+  --g-gray-alpha-300: #ffffff21;
+  --g-gray-alpha-400: #ffffff24;
+  --g-gray-alpha-500: #ffffff3d;
+  --g-gray-alpha-600: #ffffff82;
+  --g-gray-alpha-700: #ffffff8a;
+  --g-gray-alpha-800: #ffffff78;
+  --g-gray-alpha-900: #ffffff9c;
+  --g-gray-alpha-1000: #ffffffeb;
+
+  --g-blue-100: #06193a;
+  --g-blue-200: #022248;
+  --g-blue-300: #002f62;
+  --g-blue-400: #003674;
+  --g-blue-500: #00418b;
+  --g-blue-600: #0090ff;
+  --g-blue-700: #006efe;
+  --g-blue-800: #005be7;
+  --g-blue-900: #47a8ff;
+  --g-blue-1000: #eaf6ff;
+
+  --g-red-100: #330a11;
+  --g-red-200: #440d13;
+  --g-red-300: #5d0e17;
+  --g-red-400: #6f101b;
+  --g-red-500: #88151f;
+  --g-red-600: #f32e40;
+  --g-red-700: #f13242;
+  --g-red-800: #e2162a;
+  --g-red-900: #ff565f;
+  --g-red-1000: #ffe9ed;
+
+  --g-amber-100: #2a1700;
+  --g-amber-200: #361900;
+  --g-amber-300: #502800;
+  --g-amber-400: #5b3000;
+  --g-amber-500: #703e00;
+  --g-amber-600: #ed9a00;
+  --g-amber-700: #ffae00;
+  --g-amber-800: #ff9300;
+  --g-amber-900: #ff9300;
+  --g-amber-1000: #fff3d5;
+
+  --g-green-100: #002608;
+  --g-green-200: #00320b;
+  --g-green-300: #003a0e;
+  --g-green-400: #004615;
+  --g-green-500: #006717;
+  --g-green-600: #00952d;
+  --g-green-700: #00ac3a;
+  --g-green-800: #009432;
+  --g-green-900: #00ca50;
+  --g-green-1000: #d8ffe4;
+
+  --g-teal-100: #00231b;
+  --g-teal-200: #002b22;
+  --g-teal-300: #003d34;
+  --g-teal-400: #004035;
+  --g-teal-500: #006354;
+  --g-teal-600: #009e86;
+  --g-teal-700: #00aa95;
+  --g-teal-800: #00927f;
+  --g-teal-900: #00cfb7;
+  --g-teal-1000: #cbfff5;
+
+  --g-purple-100: #290c33;
+  --g-purple-200: #341142;
+  --g-purple-300: #47185e;
+  --g-purple-400: #541a76;
+  --g-purple-500: #642290;
+  --g-purple-600: #9440d5;
+  --g-purple-700: #9440d5;
+  --g-purple-800: #7d2bba;
+  --g-purple-900: #c472fb;
+  --g-purple-1000: #fbecff;
+
+  --g-pink-100: #310d1e;
+  --g-pink-200: #420c25;
+  --g-pink-300: #571032;
+  --g-pink-400: #5d0c34;
+  --g-pink-500: #76063f;
+  --g-pink-600: #ba0056;
+  --g-pink-700: #f12b82;
+  --g-pink-800: #e7006d;
+  --g-pink-900: #ff4d8d;
+  --g-pink-1000: #ffe9f4;
+
+  --g-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --g-shadow-menu: 0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04), 0 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --g-shadow-modal: 0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04), 0 24px 32px -8px rgba(0, 0, 0, 0.06);
+  --g-focus-ring: 0 0 0 2px var(--g-background-100), 0 0 0 4px var(--g-blue-900);
+
+  /* Heatmap ramp re-tuned for the dark surface (brighter/deeper so the orange
+     steps stay distinguishable against near-black). Brand orange at level-3. */
+  --g-heat-0: #262626;
+  --g-heat-1: #4d1e0a;
+  --g-heat-2: #7a3212;
+  --g-heat-3: #e1511e;
+  --g-heat-4: #ff7a45;
+  --g-heat-absent-outline: var(--g-red-600);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-primary-bg-theme: var(--primary-bg-theme);
+  --color-secondary-bg-theme: var(--secondary-bg-theme);
+  --color-foreground: var(--foreground);
+  --color-primary-dark-gray: var(--primary-dark-gray);
+  --color-secondary-dark-gray: var(--secondary-dark-gray);
+  --color-primary-navy-blue: var(--primary-navy-blue);
+  --color-quaternary-dark-gray: var(--quaternary-dark-gray);
+  --color-tertiary-dark-gray: var(--tertiary-dark-gray);
+  --color-primary-light-gray: var(--primary-light-gray);
+  --color-secondary-light-gray: var(--secondary-light-gray);
+  --color-primary-green: var(--primary-green);
+  --color-light-stroke: var(--light-stroke);
+  --color-primary-blue-400: var(--primary-blue-400);
+  --color-primary-blue-500: var(--primary-blue-500);
+  --color-secondary-alpha-10: var(--secondary-alpha-10);
+  --color-secondary-alpha-5: var(--secondary-alpha-5);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-text-light: var(--text-light);
+
+  /* Geist-named tokens, usable directly as e.g. bg-g-blue-700, text-g-gray-900 */
+  --color-g-primary: var(--g-primary);
+  --color-g-secondary: var(--g-secondary);
+  --color-g-tertiary: var(--g-tertiary);
+  --color-g-background-100: var(--g-background-100);
+  --color-g-background-200: var(--g-background-200);
+
+  --color-g-gray-100: var(--g-gray-100);
+  --color-g-gray-200: var(--g-gray-200);
+  --color-g-gray-300: var(--g-gray-300);
+  --color-g-gray-400: var(--g-gray-400);
+  --color-g-gray-500: var(--g-gray-500);
+  --color-g-gray-600: var(--g-gray-600);
+  --color-g-gray-700: var(--g-gray-700);
+  --color-g-gray-800: var(--g-gray-800);
+  --color-g-gray-900: var(--g-gray-900);
+  --color-g-gray-1000: var(--g-gray-1000);
+
+  --color-g-gray-alpha-100: var(--g-gray-alpha-100);
+  --color-g-gray-alpha-200: var(--g-gray-alpha-200);
+  --color-g-gray-alpha-300: var(--g-gray-alpha-300);
+  --color-g-gray-alpha-400: var(--g-gray-alpha-400);
+  --color-g-gray-alpha-500: var(--g-gray-alpha-500);
+  --color-g-gray-alpha-600: var(--g-gray-alpha-600);
+  --color-g-gray-alpha-700: var(--g-gray-alpha-700);
+  --color-g-gray-alpha-800: var(--g-gray-alpha-800);
+  --color-g-gray-alpha-900: var(--g-gray-alpha-900);
+  --color-g-gray-alpha-1000: var(--g-gray-alpha-1000);
+
+  --color-g-blue-100: var(--g-blue-100);
+  --color-g-blue-200: var(--g-blue-200);
+  --color-g-blue-300: var(--g-blue-300);
+  --color-g-blue-400: var(--g-blue-400);
+  --color-g-blue-500: var(--g-blue-500);
+  --color-g-blue-600: var(--g-blue-600);
+  --color-g-blue-700: var(--g-blue-700);
+  --color-g-blue-800: var(--g-blue-800);
+  --color-g-blue-900: var(--g-blue-900);
+  --color-g-blue-1000: var(--g-blue-1000);
+
+  --color-g-red-100: var(--g-red-100);
+  --color-g-red-200: var(--g-red-200);
+  --color-g-red-300: var(--g-red-300);
+  --color-g-red-400: var(--g-red-400);
+  --color-g-red-500: var(--g-red-500);
+  --color-g-red-600: var(--g-red-600);
+  --color-g-red-700: var(--g-red-700);
+  --color-g-red-800: var(--g-red-800);
+  --color-g-red-900: var(--g-red-900);
+  --color-g-red-1000: var(--g-red-1000);
+
+  --color-g-amber-100: var(--g-amber-100);
+  --color-g-amber-200: var(--g-amber-200);
+  --color-g-amber-300: var(--g-amber-300);
+  --color-g-amber-400: var(--g-amber-400);
+  --color-g-amber-500: var(--g-amber-500);
+  --color-g-amber-600: var(--g-amber-600);
+  --color-g-amber-700: var(--g-amber-700);
+  --color-g-amber-800: var(--g-amber-800);
+  --color-g-amber-900: var(--g-amber-900);
+  --color-g-amber-1000: var(--g-amber-1000);
+
+  --color-g-green-100: var(--g-green-100);
+  --color-g-green-200: var(--g-green-200);
+  --color-g-green-300: var(--g-green-300);
+  --color-g-green-400: var(--g-green-400);
+  --color-g-green-500: var(--g-green-500);
+  --color-g-green-600: var(--g-green-600);
+  --color-g-green-700: var(--g-green-700);
+  --color-g-green-800: var(--g-green-800);
+  --color-g-green-900: var(--g-green-900);
+  --color-g-green-1000: var(--g-green-1000);
+
+  --color-g-teal-100: var(--g-teal-100);
+  --color-g-teal-200: var(--g-teal-200);
+  --color-g-teal-300: var(--g-teal-300);
+  --color-g-teal-400: var(--g-teal-400);
+  --color-g-teal-500: var(--g-teal-500);
+  --color-g-teal-600: var(--g-teal-600);
+  --color-g-teal-700: var(--g-teal-700);
+  --color-g-teal-800: var(--g-teal-800);
+  --color-g-teal-900: var(--g-teal-900);
+  --color-g-teal-1000: var(--g-teal-1000);
+
+  --color-g-purple-100: var(--g-purple-100);
+  --color-g-purple-200: var(--g-purple-200);
+  --color-g-purple-300: var(--g-purple-300);
+  --color-g-purple-400: var(--g-purple-400);
+  --color-g-purple-500: var(--g-purple-500);
+  --color-g-purple-600: var(--g-purple-600);
+  --color-g-purple-700: var(--g-purple-700);
+  --color-g-purple-800: var(--g-purple-800);
+  --color-g-purple-900: var(--g-purple-900);
+  --color-g-purple-1000: var(--g-purple-1000);
+
+  --color-g-pink-100: var(--g-pink-100);
+  --color-g-pink-200: var(--g-pink-200);
+  --color-g-pink-300: var(--g-pink-300);
+  --color-g-pink-400: var(--g-pink-400);
+  --color-g-pink-500: var(--g-pink-500);
+  --color-g-pink-600: var(--g-pink-600);
+  --color-g-pink-700: var(--g-pink-700);
+  --color-g-pink-800: var(--g-pink-800);
+  --color-g-pink-900: var(--g-pink-900);
+  --color-g-pink-1000: var(--g-pink-1000);
+
+  /* Heatmap ramp — usable as bg-g-heat-0 … bg-g-heat-4 (theme-aware). */
+  --color-g-heat-0: var(--g-heat-0);
+  --color-g-heat-1: var(--g-heat-1);
+  --color-g-heat-2: var(--g-heat-2);
+  --color-g-heat-3: var(--g-heat-3);
+  --color-g-heat-4: var(--g-heat-4);
+
+  /* Remap Tailwind's built-in palette onto Geist so existing utility
+     classes (text-gray-500, bg-blue-600, border-red-300, ...) inherit
+     the design system automatically, in both light and dark. Steps used
+     mostly for text/icons are biased darker to preserve WCAG AA contrast. */
+  --color-gray-50: var(--g-gray-100);
+  --color-gray-100: var(--g-gray-100);
+  --color-gray-200: var(--g-gray-200);
+  --color-gray-300: var(--g-gray-400);
+  --color-gray-400: var(--g-gray-500);
+  --color-gray-500: var(--g-gray-800);
+  --color-gray-600: var(--g-gray-900);
+  --color-gray-700: var(--g-gray-900);
+  --color-gray-800: var(--g-gray-1000);
+  --color-gray-900: var(--g-gray-1000);
+  --color-gray-950: var(--g-gray-1000);
+
+  --color-slate-50: var(--g-gray-100);
+  --color-slate-100: var(--g-gray-100);
+  --color-slate-200: var(--g-gray-200);
+  --color-slate-300: var(--g-gray-400);
+  --color-slate-400: var(--g-gray-500);
+  --color-slate-500: var(--g-gray-800);
+  --color-slate-600: var(--g-gray-900);
+  --color-slate-700: var(--g-gray-900);
+  --color-slate-800: var(--g-gray-1000);
+  --color-slate-900: var(--g-gray-1000);
+  --color-slate-950: var(--g-gray-1000);
+
+  --color-zinc-50: var(--g-gray-100);
+  --color-zinc-100: var(--g-gray-100);
+  --color-zinc-200: var(--g-gray-200);
+  --color-zinc-300: var(--g-gray-400);
+  --color-zinc-400: var(--g-gray-500);
+  --color-zinc-500: var(--g-gray-800);
+  --color-zinc-600: var(--g-gray-900);
+  --color-zinc-700: var(--g-gray-900);
+  --color-zinc-800: var(--g-gray-1000);
+  --color-zinc-900: var(--g-gray-1000);
+  --color-zinc-950: var(--g-gray-1000);
+
+  --color-neutral-50: var(--g-gray-100);
+  --color-neutral-100: var(--g-gray-100);
+  --color-neutral-200: var(--g-gray-200);
+  --color-neutral-300: var(--g-gray-400);
+  --color-neutral-400: var(--g-gray-500);
+  --color-neutral-500: var(--g-gray-800);
+  --color-neutral-600: var(--g-gray-900);
+  --color-neutral-700: var(--g-gray-900);
+  --color-neutral-800: var(--g-gray-1000);
+  --color-neutral-900: var(--g-gray-1000);
+  --color-neutral-950: var(--g-gray-1000);
+
+  --color-blue-50: var(--g-blue-100);
+  --color-blue-100: var(--g-blue-100);
+  --color-blue-200: var(--g-blue-200);
+  --color-blue-300: var(--g-blue-300);
+  --color-blue-400: var(--g-blue-400);
+  --color-blue-500: var(--g-blue-600);
+  --color-blue-600: var(--g-blue-700);
+  --color-blue-700: var(--g-blue-800);
+  --color-blue-800: var(--g-blue-900);
+  --color-blue-900: var(--g-blue-1000);
+  --color-blue-950: var(--g-blue-1000);
+
+  --color-red-50: var(--g-red-100);
+  --color-red-100: var(--g-red-100);
+  --color-red-200: var(--g-red-200);
+  --color-red-300: var(--g-red-300);
+  --color-red-400: var(--g-red-400);
+  --color-red-500: var(--g-red-600);
+  --color-red-600: var(--g-red-700);
+  --color-red-700: var(--g-red-800);
+  --color-red-800: var(--g-red-900);
+  --color-red-900: var(--g-red-1000);
+  --color-red-950: var(--g-red-1000);
+
+  --color-amber-50: var(--g-amber-100);
+  --color-amber-100: var(--g-amber-100);
+  --color-amber-200: var(--g-amber-200);
+  --color-amber-300: var(--g-amber-300);
+  --color-amber-400: var(--g-amber-400);
+  --color-amber-500: var(--g-amber-600);
+  --color-amber-600: var(--g-amber-700);
+  --color-amber-700: var(--g-amber-800);
+  --color-amber-800: var(--g-amber-900);
+  --color-amber-900: var(--g-amber-1000);
+  --color-amber-950: var(--g-amber-1000);
+
+  --color-yellow-50: var(--g-amber-100);
+  --color-yellow-100: var(--g-amber-100);
+  --color-yellow-200: var(--g-amber-200);
+  --color-yellow-300: var(--g-amber-300);
+  --color-yellow-400: var(--g-amber-400);
+  --color-yellow-500: var(--g-amber-600);
+  --color-yellow-600: var(--g-amber-700);
+  --color-yellow-700: var(--g-amber-800);
+  --color-yellow-800: var(--g-amber-900);
+  --color-yellow-900: var(--g-amber-1000);
+  --color-yellow-950: var(--g-amber-1000);
+
+  --color-green-50: var(--g-green-100);
+  --color-green-100: var(--g-green-100);
+  --color-green-200: var(--g-green-200);
+  --color-green-300: var(--g-green-300);
+  --color-green-400: var(--g-green-400);
+  --color-green-500: var(--g-green-600);
+  --color-green-600: var(--g-green-700);
+  --color-green-700: var(--g-green-800);
+  --color-green-800: var(--g-green-900);
+  --color-green-900: var(--g-green-1000);
+  --color-green-950: var(--g-green-1000);
+
+  --color-emerald-50: var(--g-green-100);
+  --color-emerald-100: var(--g-green-100);
+  --color-emerald-200: var(--g-green-200);
+  --color-emerald-300: var(--g-green-300);
+  --color-emerald-400: var(--g-green-400);
+  --color-emerald-500: var(--g-green-600);
+  --color-emerald-600: var(--g-green-700);
+  --color-emerald-700: var(--g-green-800);
+  --color-emerald-800: var(--g-green-900);
+  --color-emerald-900: var(--g-green-1000);
+  --color-emerald-950: var(--g-green-1000);
+
+  --color-teal-50: var(--g-teal-100);
+  --color-teal-100: var(--g-teal-100);
+  --color-teal-200: var(--g-teal-200);
+  --color-teal-300: var(--g-teal-300);
+  --color-teal-400: var(--g-teal-400);
+  --color-teal-500: var(--g-teal-600);
+  --color-teal-600: var(--g-teal-700);
+  --color-teal-700: var(--g-teal-800);
+  --color-teal-800: var(--g-teal-900);
+  --color-teal-900: var(--g-teal-1000);
+  --color-teal-950: var(--g-teal-1000);
+
+  --color-purple-50: var(--g-purple-100);
+  --color-purple-100: var(--g-purple-100);
+  --color-purple-200: var(--g-purple-200);
+  --color-purple-300: var(--g-purple-300);
+  --color-purple-400: var(--g-purple-400);
+  --color-purple-500: var(--g-purple-600);
+  --color-purple-600: var(--g-purple-700);
+  --color-purple-700: var(--g-purple-800);
+  --color-purple-800: var(--g-purple-900);
+  --color-purple-900: var(--g-purple-1000);
+  --color-purple-950: var(--g-purple-1000);
+
+  --color-pink-50: var(--g-pink-100);
+  --color-pink-100: var(--g-pink-100);
+  --color-pink-200: var(--g-pink-200);
+  --color-pink-300: var(--g-pink-300);
+  --color-pink-400: var(--g-pink-400);
+  --color-pink-500: var(--g-pink-600);
+  --color-pink-600: var(--g-pink-700);
+  --color-pink-700: var(--g-pink-800);
+  --color-pink-800: var(--g-pink-900);
+  --color-pink-900: var(--g-pink-1000);
+  --color-pink-950: var(--g-pink-1000);
+
+  --radius-sm: var(--g-radius-sm);
+  --radius-md: var(--g-radius-md);
+  --radius-lg: var(--g-radius-lg);
+  --radius-xl: var(--g-radius-lg);
+  --radius-2xl: var(--g-radius-lg);
+  --radius-full: var(--g-radius-full);
+}
+
+body {
+  background: var(--g-background-100);
+  color: var(--g-primary);
+  -webkit-font-smoothing: antialiased !important;
+}
+
+/* Geist typography utilities, matching design.md / dark-design.md scale */
+@layer utilities {
+  .text-heading-72 { font-size: 72px; font-weight: 600; line-height: 72px; letter-spacing: -4.32px; }
+  .text-heading-64 { font-size: 64px; font-weight: 600; line-height: 64px; letter-spacing: -3.84px; }
+  .text-heading-56 { font-size: 56px; font-weight: 600; line-height: 56px; letter-spacing: -3.36px; }
+  .text-heading-48 { font-size: 48px; font-weight: 600; line-height: 56px; letter-spacing: -2.88px; }
+  .text-heading-40 { font-size: 40px; font-weight: 600; line-height: 48px; letter-spacing: -2.4px; }
+  .text-heading-32 { font-size: 32px; font-weight: 600; line-height: 40px; letter-spacing: -1.28px; }
+  .text-heading-24 { font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.96px; }
+  .text-heading-20 { font-size: 20px; font-weight: 600; line-height: 26px; letter-spacing: -0.4px; }
+  .text-heading-16 { font-size: 16px; font-weight: 600; line-height: 24px; letter-spacing: -0.32px; }
+  .text-heading-14 { font-size: 14px; font-weight: 600; line-height: 20px; letter-spacing: -0.28px; }
+
+  .text-button-16 { font-size: 16px; font-weight: 500; line-height: 20px; }
+  .text-button-14 { font-size: 14px; font-weight: 500; line-height: 20px; }
+  .text-button-12 { font-size: 12px; font-weight: 500; line-height: 16px; }
+
+  .text-label-20 { font-size: 20px; font-weight: 400; line-height: 32px; }
+  .text-label-18 { font-size: 18px; font-weight: 400; line-height: 20px; }
+  .text-label-16 { font-size: 16px; font-weight: 400; line-height: 20px; }
+  .text-label-14 { font-size: 14px; font-weight: 400; line-height: 20px; }
+  .text-label-13 { font-size: 13px; font-weight: 400; line-height: 16px; }
+  .text-label-12 { font-size: 12px; font-weight: 400; line-height: 16px; }
+
+  .text-copy-24 { font-size: 24px; font-weight: 400; line-height: 36px; }
+  .text-copy-20 { font-size: 20px; font-weight: 400; line-height: 36px; }
+  .text-copy-18 { font-size: 18px; font-weight: 400; line-height: 28px; }
+  .text-copy-16 { font-size: 16px; font-weight: 400; line-height: 24px; }
+  .text-copy-14 { font-size: 14px; font-weight: 400; line-height: 20px; }
+  .text-copy-13 { font-size: 13px; font-weight: 400; line-height: 18px; }
+
+  .shadow-geist-card { box-shadow: var(--g-shadow-card); }
+  .shadow-geist-menu { box-shadow: var(--g-shadow-menu); }
+  .shadow-geist-modal { box-shadow: var(--g-shadow-modal); }
+
+  .focus-ring-geist:focus-visible {
+    outline: none;
+    box-shadow: var(--g-focus-ring);
+  }
+}
+
+/* CUSTOM ANIMATIONS (LOOPING FORMAT) */
+@layer utilities {
+
+  /* Slow continuous rotation — for the loading-spinner glow ring. Linear/
+     infinite is correct here: this is constant motion, not a state change. */
+  .animate-spin-slow {
+    animation: spin-slow 1.8s linear infinite;
+  }
+
+  @keyframes spin-slow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Fade In */
+  .animate-fadeIn {
+    animation: fadeIn 2s linear infinite;
+  }
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* Fade Out (acts similar to fadeIn for looping) */
+  .animate-fadeOut {
+    animation: fadeOut 2s linear infinite;
+  }
+
+  @keyframes fadeOut {
+    0% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  /* Zoom In */
+  .animate-zoomIn {
+    animation: zoomIn 2s linear infinite;
+  }
+
+  @keyframes zoomIn {
+    0% {
+      transform: scale(0.9);
+    }
+
+    50% {
+      transform: scale(1.1);
+    }
+
+    100% {
+      transform: scale(0.9);
+    }
+  }
+
+  /* Zoom Out */
+  .animate-zoomOut {
+    animation: zoomOut 2s linear infinite;
+  }
+
+  @keyframes zoomOut {
+    0% {
+      transform: scale(1.1);
+    }
+
+    50% {
+      transform: scale(0.9);
+    }
+
+    100% {
+      transform: scale(1.1);
+    }
+  }
+
+  /* Scale Up */
+  .animate-scaleUp {
+    animation: scaleUp 2s linear infinite;
+  }
+
+  @keyframes scaleUp {
+    0% {
+      transform: scale(0.95);
+    }
+
+    50% {
+      transform: scale(1);
+    }
+
+    100% {
+      transform: scale(0.95);
+    }
+  }
+
+  /* Scale Down */
+  .animate-scaleDown {
+    animation: scaleDown 2s linear infinite;
+  }
+
+  @keyframes scaleDown {
+    0% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(0.90);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Bounce */
+  .animate-bounce {
+    animation: bounce 2s linear infinite;
+  }
+
+  @keyframes bounce {
+    0% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-5px);
+    }
+
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  /* Slide In Left */
+  .animate-slideInLeft {
+    animation: slideInLeft 2s linear infinite;
+  }
+
+  @keyframes slideInLeft {
+    0% {
+      transform: translateX(-5%);
+    }
+
+    50% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-5%);
+    }
+  }
+
+  /* Slide In Right */
+  .animate-slideInRight {
+    animation: slideInRight 2s linear infinite;
+  }
+
+  @keyframes slideInRight {
+    0% {
+      transform: translateX(-10%);
+    }
+
+    50% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-10%);
+    }
+  }
+
+  /* Slide In Top */
+  .animate-slideInTop {
+    animation: slideInTop 2s linear infinite;
+  }
+
+  @keyframes slideInTop {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    50% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+
+  /* Slide In Bottom */
+  .animate-slideInBottom {
+    animation: slideInBottom 2s linear infinite;
+  }
+
+  @keyframes slideInBottom {
+    0% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    50% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  /* AI Summary reveal — a rare, click-triggered "generating" moment (not a
+     high-frequency loop), so a longer expressive beat is appropriate here.
+     The gradient is oversized (400% 400%) behind the card so sweeping its
+     background-position actually travels the color stops across the card
+     and bleeds them into each other, rather than rotating in place around a
+     fixed center (which a conic-gradient + hue-rotate would do). */
+  .animate-ai-summary-swirl {
+    animation: ai-summary-swirl 2.6s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  @keyframes ai-summary-swirl {
+    0% {
+      opacity: 0;
+      background-position: 0% 50%;
+    }
+
+    8% {
+      opacity: 1;
+    }
+
+    30% {
+      background-position: 100% 50%;
+    }
+
+    55% {
+      background-position: 0% 100%;
+    }
+
+    75% {
+      opacity: 1;
+      background-position: 100% 0%;
+    }
+
+    100% {
+      opacity: 0;
+      background-position: 100% 0%;
+    }
+  }
+
+  .animate-ai-summary-reveal {
+    animation: ai-summary-reveal 500ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  @keyframes ai-summary-reveal {
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+
+    .animate-ai-summary-swirl,
+    .animate-ai-summary-reveal {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
+
+/* Datepicker Styles */
+.react-datepicker {
+  border: 0 !important;
+  width: 100% !important;
+  background: var(--g-background-100) !important;
+}
+
+.react-datepicker__header {
+  background: var(--g-background-100) !important;
+}
+
+.react-datepicker__month-container,
+.react-datepicker__day {
+  background: var(--g-background-100);
+  color: var(--g-primary);
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header {
+  color: var(--g-primary) !important;
+}
+
+.react-datepicker__day-name {
+  color: var(--g-primary) !important;
+}
+
+.react-datepicker__day {
+  color: var(--g-primary) !important;
+}
+
+.react-datepicker__day--selected:not([aria-disabled="true"]):hover,
+.react-datepicker__day--in-selecting-range:not([aria-disabled="true"]):hover,
+.react-datepicker__day--in-range:not([aria-disabled="true"]):hover,
+.react-datepicker__month-text--selected:not([aria-disabled="true"]):hover,
+.react-datepicker__month-text--in-selecting-range:not([aria-disabled="true"]):hover,
+.react-datepicker__month-text--in-range:not([aria-disabled="true"]):hover,
+.react-datepicker__quarter-text--selected:not([aria-disabled="true"]):hover,
+.react-datepicker__quarter-text--in-selecting-range:not([aria-disabled="true"]):hover,
+.react-datepicker__quarter-text--in-range:not([aria-disabled="true"]):hover,
+.react-datepicker__year-text--selected:not([aria-disabled="true"]):hover,
+.react-datepicker__year-text--in-selecting-range:not([aria-disabled="true"]):hover,
+.react-datepicker__year-text--in-range:not([aria-disabled="true"]):hover {
+  background-color: var(--g-blue-700) !important;
+  color: #ffffff !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range,
+.react-datepicker__month-text--selected,
+.react-datepicker__month-text--in-selecting-range,
+.react-datepicker__month-text--in-range,
+.react-datepicker__quarter-text--selected,
+.react-datepicker__quarter-text--in-selecting-range,
+.react-datepicker__quarter-text--in-range,
+.react-datepicker__year-text--selected,
+.react-datepicker__year-text--in-selecting-range,
+.react-datepicker__year-text--in-range {
+  background-color: var(--g-blue-700) !important;
+  color: #ffffff !important;
+}
+
+.react-datepicker__month-container {
+  width: 100% !important;
+}
+
+/* Custom styles for TimePicker to match your InputField */
+.ant-picker {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--g-radius-sm);
+  border: 1px solid var(--g-gray-alpha-400);
+  background: var(--g-background-100);
+  transition: all 0.2s;
+}
+
+.ant-picker:hover {
+  border-color: var(--g-gray-500);
+}
+
+.ant-picker-focused {
+  box-shadow: var(--g-focus-ring);
+  border-color: var(--g-blue-700);
+  outline: none;
+}
+
+.ant-picker-input>input {
+  font-size: 14px;
+  color: var(--g-primary);
+}
+
+.ant-picker-input>input::placeholder {
+  color: var(--g-secondary);
+}
+
+.ant-picker-status-error {
+  border-color: var(--g-red-500);
+}
+
+#startTime::placeholder {
+  color: var(--g-secondary);
+}
+
+#startTime {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--g-primary);
+}
+
+#endTime::placeholder {
+  color: var(--g-secondary);
+}
+
+#endTime {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--g-primary);
+}
+
+.ant-picker-status-error.ant-picker-focused {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--g-red-700) 10%, transparent);
+}
+
+/* Dropdown styles */
+.custom-timepicker-dropdown .ant-picker-panel {
+  border-radius: var(--g-radius-md);
+  background: var(--g-background-100);
+}
+
+.custom-timepicker-dropdown .ant-picker-time-panel-column>li.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+  background: var(--g-blue-100);
+  color: var(--g-blue-700);
+  font-weight: 500;
+}
+
+/* custumize calanedar */
+@media (max-width: 640px) {
+  .react-datepicker {
+    flex-direction: column !important;
+    /* max-width: 320px !important; */
+  }
+}
+
+.react-datepicker {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.react-datepicker__header {
+  border: 0 !important;
+}
+
+.react-datepicker__navigation {
+  padding: 16px !important;
+  border-radius: var(--g-radius-md) !important;
+  border: 1px solid var(--g-gray-200) !important;
+  transition: background-color 0.2s ease-in-out !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  top: 7px !important;
+}
+
+.react-datepicker__navigation-icon--next {
+  left: 1px !important;
+  top: 1px !important;
+}
+
+.react-datepicker__navigation-icon--previous {
+  left: 1px !important;
+  top: 1px !important;
+}
+
+.react-datepicker__navigation-icon:before {
+  border: 0px solid var(--g-secondary) !important;
+  border-width: 2px 2px 0px 0px !important;
+}
+
+.react-datepicker__header {
+  padding: 16px !important;
+}
+
+/* Print: Download → window.print() shows only the payslip card, not the app chrome */
+@media print {
+  body * { visibility: hidden; }
+  #payslip-print, #payslip-print * { visibility: visible; }
+  #payslip-print { position: absolute; inset: 0; margin: 0; }
+}
+

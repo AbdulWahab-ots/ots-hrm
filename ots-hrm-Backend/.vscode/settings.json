@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/3fcde6b7-b72c-47d4-be6c-419f5edcb600/resourceGroups/HRM_APP/providers/Microsoft.Web/sites/hrm-backend-dev-server",
+    "appService.deploySubpath": "."
+}

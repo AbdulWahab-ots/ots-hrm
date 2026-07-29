@@ -1,0 +1,1 @@
+export const Modules = [ "Users", "Roles", "Department", "Designations", "LeaveTypes", "PublicHolidays", "Employees", "Attendance", "Vacations", "WorkingDays", "Shifts", "UserShifts", "Schedulers"] as const;

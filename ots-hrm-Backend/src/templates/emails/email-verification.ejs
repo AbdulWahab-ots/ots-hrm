@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .code-container {
+            background: #f8f9fa;
+            border: 2px dashed #27ae60;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+        .verification-code {
+            font-size: 36px;
+            font-weight: bold;
+            color: #27ae60;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Email Verification</h1>
+            <p>Verify your email address</p>
+        </div>
+        <div class="content">
+            <p>Hello <strong><%= name %></strong>,</p>
+            <p>Please use the following 6-digit code to verify your email address:</p>
+            
+            <div class="code-container">
+                <div class="verification-code"><%= code %></div>
+            </div>
+            
+            <div class="warning">
+                <strong>⏰ Important:</strong> This verification code will expire in 10 minutes for security reasons.
+            </div>
+            
+            <p>If you didn't request this verification, please ignore this email.</p>
+        </div>
+        <div class="footer">
+            <p>© 2024 Your App Name. All rights reserved.</p>
+            <p>This is an automated message, please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>
