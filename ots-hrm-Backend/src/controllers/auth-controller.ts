@@ -3,8 +3,8 @@ import { ControllerBase } from "./generics/controller-base";
 import { FastifyReply, FastifyRequest, preHandlerHookHandler, RouteHandlerMethod } from "fastify";
 import { AuthService } from "../bl";
 import { AppResponse } from "../utility";
-import { ExtendedRequest, ILoginRequest, ISignUpRequest, IResendCodeRequest, IForgotPasswordRequest, IResetPasswordRequest, IVerifyRequest, IInviteSignUpRequest, IValidateInviteTokenRequest } from "../models";
-import { signUpSchema, resendCodeSchema, verifySchema, loginSchema, resetPasswordSchema, forgotPasswordSchema, validateInviteTokenSchema, inviteSignUpSchema } from "../models/payload-schemas/index";
+import { ExtendedRequest, ILoginRequest, ISignUpRequest, IResendCodeRequest, IForgotPasswordRequest, IResetPasswordRequest, IVerifyRequest, IInviteSignUpRequest, IValidateInviteTokenRequest, ISetPasswordRequest } from "../models";
+import { signUpSchema, resendCodeSchema, verifySchema, loginSchema, resetPasswordSchema, forgotPasswordSchema, validateInviteTokenSchema, inviteSignUpSchema, setPasswordSchema } from "../models/payload-schemas/index";
 import { authorize, validateCompanyHeader } from "../middlewares";
 import { payloadValidator, bodyValidator, queryValidator } from "../middlewares/payload-validator";
 
@@ -79,6 +79,13 @@ export class AuthController extends ControllerBase {
                 path: 'signup-with-invite',
                 middlewares: [bodyValidator(inviteSignUpSchema)],
                 handler: this.signUpWithInvite as RouteHandlerMethod
+            },
+            {
+                method: 'POST',
+                path: 'set-password',
+                middlewares: [bodyValidator(setPasswordSchema)],
+                config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+                handler: this.setPassword as RouteHandlerMethod
             }
         ];
     }
@@ -147,6 +154,11 @@ export class AuthController extends ControllerBase {
     private validateInviteToken = async (req: FastifyRequest<{ Querystring: IValidateInviteTokenRequest }>, res: FastifyReply) => {
         const validation = await this.authService.validateInviteToken(req.query.token);
         res.send(AppResponse.success('Invite token validation result', validation));
+    }
+
+    private setPassword = async (req: FastifyRequest<{ Body: ISetPasswordRequest }>, res: FastifyReply) => {
+        const user = await this.authService.setPasswordViaToken(req.body.token, req.body.newPassword);
+        res.send(AppResponse.success('Password set successfully', user));
     }
 
     private signUpWithInvite = async (req: FastifyRequest<{ Body: IInviteSignUpRequest }>, res: FastifyReply) => {

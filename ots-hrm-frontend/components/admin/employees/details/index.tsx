@@ -14,6 +14,7 @@ import {
   Banknote,
   Pencil,
   Trash2,
+  KeyRound,
 } from "lucide-react";
 import { AppDispatch, RootState } from "@/store/store";
 import {
@@ -23,6 +24,7 @@ import {
   uploadProfileImageAPI,
   fetchAllDepartments,
   fetchAllDesignations,
+  sendSetPasswordEmailAPI,
 } from "@/services/adminServices";
 import { Employee, EmployeePayload } from "@/utils/types";
 import { FormikHelpers } from "formik";
@@ -68,6 +70,7 @@ function EmployeeDetailsView() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isSendingSetPasswordEmail, setIsSendingSetPasswordEmail] = useState(false);
 
   const fetchEmployee = useCallback(async () => {
     if (!employeeId) {
@@ -143,6 +146,18 @@ function EmployeeDetailsView() {
     }
   };
 
+  const handleSendSetPasswordEmail = async () => {
+    if (!employee) return;
+    try {
+      setIsSendingSetPasswordEmail(true);
+      await sendSetPasswordEmailAPI(dispatch, employee.id);
+    } catch (error) {
+      console.error("Failed to send set-password email:", error);
+    } finally {
+      setIsSendingSetPasswordEmail(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!employee) return;
     try {
@@ -188,6 +203,13 @@ function EmployeeDetailsView() {
             variant="outline"
             iconPosition="center"
             onClick={() => setIsDeleteModalOpen(true)}
+          />
+          <Button
+            icon={KeyRound}
+            variant="outline"
+            label="Send Set Password Email"
+            isLoading={isSendingSetPasswordEmail}
+            onClick={handleSendSetPasswordEmail}
           />
           <Button
             icon={Pencil}

@@ -59,3 +59,8 @@ export interface IInviteSignUpRequest {
 export interface IValidateInviteTokenRequest {
     token: string;
 }
+
+export interface ISetPasswordRequest {
+    token: string;
+    newPassword: string;
+}

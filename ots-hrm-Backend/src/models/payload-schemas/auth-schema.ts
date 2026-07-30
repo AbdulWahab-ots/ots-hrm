@@ -66,6 +66,15 @@ export const inviteSignUpSchema = z.object({
     pictureUrl: z.string().optional()
 });
 
+export const setPasswordSchema = z.object({
+    token: z.string().min(1, "Token is required"),
+    newPassword: z.string().min(8).max(100)
+        .regex(
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+            "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character"
+        )
+});
+
 export const changePasswordSchema = z.object({
     currentPassword: z.string().min(8).max(100),
     newPassword: z.string().min(8).max(100)

@@ -56,3 +56,34 @@ export const verifyInviteToken = (token: string): any => {
         }
     );
 };
+
+// Set-password JWT functions — used for the "set your password" link an Employee
+// receives by email after an Admin creates their account, and reuses the same
+// signing secret/style as the invite token above.
+export const generateSetPasswordToken = (payload: { userId: string; email: string }): string => {
+    const tokenPayload = {
+        ...payload,
+        type: 'set-password'
+    };
+
+    return sign(
+        tokenPayload,
+        requireSecret(process.env.INVITE_TOKEN_SECRET_KEY, 'INVITE_TOKEN_SECRET_KEY'),
+        {
+            expiresIn: '3d',
+            issuer: 'hrm-system',
+            audience: 'set-password'
+        }
+    );
+};
+
+export const verifySetPasswordToken = (token: string): any => {
+    return verify(
+        token,
+        requireSecret(process.env.INVITE_TOKEN_SECRET_KEY, 'INVITE_TOKEN_SECRET_KEY'),
+        {
+            issuer: 'hrm-system',
+            audience: 'set-password'
+        }
+    );
+};

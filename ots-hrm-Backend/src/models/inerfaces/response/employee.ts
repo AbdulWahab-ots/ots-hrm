@@ -10,7 +10,7 @@ import { IEmployeeBenefitResponse } from "./employee-benefit";
 // during create/onboard. The employee is still created; the admin can finish the step
 // from the profile screen.
 export interface IEmployeeSetupWarning {
-    step: 'benefits' | 'shift';
+    step: 'benefits' | 'shift' | 'welcomeEmail';
     message: string;
 }
 

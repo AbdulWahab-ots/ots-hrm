@@ -3,7 +3,7 @@ import { CompanyRepository, RoleRepository, UserRepository, VerificationReposito
 import { Actions, FilterMatchModes, FilterOperators, IForgotPasswordRequest, ILoginRequest, IResendCodeRequest, IResetPasswordRequest, ISignUpRequest, IUserResponse, IVerifyRequest, IInviteSignUpRequest } from "../models";
 import { Company, Role, User, Verification, Invite, Employee, EmployeeBenefit } from "../entities";
 import { randomUUID, randomInt } from "crypto";
-import { compareHash, encrypt, signJwt, verifyInviteToken } from "../utility";
+import { compareHash, encrypt, signJwt, verifyInviteToken, verifySetPasswordToken } from "../utility";
 import { generateEmployeeCode } from "../utility/employee-code";
 import { FastifyError } from 'fastify'
 import { EmptyGuid, DefaultRoles } from "../constants";
@@ -285,6 +285,35 @@ export class AuthService {
             this.userRepository.invokeDbOperations(user, Actions.Update),
             this.verificationRepository.invokeDbOperations(verification, Actions.Update)
         ]);
+
+        return user.toResponse();
+    }
+
+    // Lets an Employee set their own password from the "Set Your Password" link sent in the
+    // welcome email (see EmployeeService.add). The token proves the request came from that
+    // email link, so no separate OTP code is needed — unlike the forgot-password flow.
+    async setPasswordViaToken(token: string, newPassword: string): Promise<IUserResponse> {
+        let decodedToken: any;
+        try {
+            decodedToken = verifySetPasswordToken(token);
+        } catch (error) {
+            throw new AppError('This link is invalid or has expired. Please ask your admin to resend it.', '400');
+        }
+
+        if (decodedToken.type !== 'set-password' || !decodedToken.userId) {
+            throw new AppError('This link is invalid or has expired. Please ask your admin to resend it.', '400');
+        }
+
+        const user = await this.userRepository.getOneByQuery({
+            filters: [{ field: 'id', value: decodedToken.userId, operator: FilterOperators.And, matchMode: FilterMatchModes.Equal }]
+        });
+
+        if (!user) throw new AppError('User not found', '404');
+
+        user.passwordHash = await encrypt(newPassword);
+        user.isEmailVerified = true;
+
+        await this.userRepository.invokeDbOperations(user, Actions.Update);
 
         return user.toResponse();
     }

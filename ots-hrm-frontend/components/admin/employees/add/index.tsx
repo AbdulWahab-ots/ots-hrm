@@ -28,6 +28,7 @@ import Image from "next/image";
 import ATMCard from "../../../../public/ATMCard.svg";
 import {
   EmployeeValidationSchema,
+  EmployeeEditValidationSchema,
   InviteValidationSchema,
 } from "@/utils/validationSchema";
 import { pakistaniBanks } from "@/utils/constants";
@@ -50,6 +51,10 @@ const CreateEmployee = ({
   onCancel,
 }: CreateEmployeeProps) => {
   const dispatch = useDispatch<AppDispatch>();
+  // Presence of initialValues means we're editing an existing employee. Editing never
+  // sets a password from this form — see EmployeeEditValidationSchema — password changes
+  // only happen via the "Set Password" email flow (Employee Details page).
+  const isEdit = !!initialValues;
   const
 
 
@@ -265,9 +270,18 @@ const CreateEmployee = ({
 
           <Formik
             initialValues={safeInitialValues}
-            validationSchema={EmployeeValidationSchema[step - 1]}
+            validationSchema={
+              (isEdit ? EmployeeEditValidationSchema : EmployeeValidationSchema)[
+                step - 1
+              ]
+            }
             onSubmit={async (values, formikHelpers) => {
               let updatedValues = { ...values };
+              if (isEdit) {
+                // Never submit a password from the edit form — see isEdit comment above.
+                const { password, ...userWithoutPassword } = updatedValues.user;
+                updatedValues.user = userWithoutPassword as typeof updatedValues.user;
+              }
               if (step === 2) {
                 updatedValues.benefitId =
                   selectedBenefits[0] || values.benefitId;
@@ -339,12 +353,14 @@ const CreateEmployee = ({
                         label="Email *"
                         placeholder="Enter user Email"
                       />
-                      <InputField
-                        name="user.password"
-                        label="Password *"
-                        type="password"
-                        placeholder="password"
-                      />
+                      {!isEdit && (
+                        <InputField
+                          name="user.password"
+                          label="Password *"
+                          type="password"
+                          placeholder="password"
+                        />
+                      )}
                       <InputField
                         name="phoneNumber"
                         label="Phone Number *"

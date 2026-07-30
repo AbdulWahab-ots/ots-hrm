@@ -21,11 +21,17 @@ const mailConfig = {
 };
 
 // Create transporter instance
+// Explicit timeouts so an unreachable/slow SMTP host fails fast instead of hanging the
+// request indefinitely — callers on the request path (e.g. employee creation) await
+// sendMail() and need a bounded wait to turn a failure into a non-blocking warning.
 const transporter = nodemailer.createTransport({
   host: mailConfig.host,
   port: mailConfig.port,
   secure: mailConfig.secure,
   auth: mailConfig.auth,
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 15_000,
 });
 
 // Templates path
@@ -93,13 +99,36 @@ export const sendMail = async (options: MailOptions): Promise<boolean> => {
   }
 };
 
-// Send welcome email
-export const sendWelcomeEmail = async (to: string, userData: { name: string; email: string }): Promise<boolean> => {
+// Send welcome email (optionally with a "Set Your Password" link for a newly created employee)
+export const sendWelcomeEmail = async (
+  to: string,
+  userData: { name: string; email: string; setPasswordLink?: string }
+): Promise<boolean> => {
   return sendMail({
     to,
-    subject: 'Welcome to Our Platform!',
+    subject: 'Welcome to OTS HRM — set up your account',
     template: 'welcome',
     data: userData,
+    // A plain-text alternative alongside the HTML part is a meaningful spam-score signal
+    // (HTML-only mail from a new/unauthenticated sending domain is treated with more suspicion).
+    text: userData.setPasswordLink
+      ? `Welcome to OTS HRM, ${userData.name}.\n\nYour login email is ${userData.email}.\n\nSet your password here: ${userData.setPasswordLink}\n\nThis link expires in 3 days. If you weren't expecting this email, you can ignore it.`
+      : `Welcome to OTS HRM, ${userData.name}. Your login email is ${userData.email}.`,
+  });
+};
+
+// Send a "Set Your Password" link to an existing employee, triggered by an admin instead of
+// setting/viewing a plaintext password directly (see EmployeeService.sendSetPasswordEmail).
+export const sendSetPasswordEmail = async (
+  to: string,
+  userData: { name: string; email: string; setPasswordLink: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: 'Set a new password for your OTS HRM account',
+    template: 'welcome',
+    data: userData,
+    text: `Hi ${userData.name},\n\nYour admin has requested a password reset for your OTS HRM account (${userData.email}).\n\nSet your new password here: ${userData.setPasswordLink}\n\nThis link expires in 3 days. If you weren't expecting this email, you can ignore it.`,
   });
 };
 

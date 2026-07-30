@@ -41,6 +41,10 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   onPunchUpdate,
 }) => {
   const [employeeStatus, setEmployeeStatus] = React.useState<any>(null);
+  // "Today is ..." depends on the render instant, which differs between the server's
+  // SSR pass and the client's hydration pass — compute it client-side only, after mount,
+  // so the initial server/client markup match and React doesn't report a hydration mismatch.
+  const [todayLabel, setTodayLabel] = React.useState("");
   const dispatch = useDispatch<AppDispatch>();
   const isFetchedStats = useRef(false);
 
@@ -87,6 +91,11 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
       });
     }
   }, [dispatch]);
+
+  useEffect(() => {
+    setTodayLabel(formatDate());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Employee ID is admin-only information — employees should not see their own
   // employee code, so only surface the badge for admin / super admin viewers.
@@ -197,7 +206,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
           <h2 className="text-[36px] font-semibold text-g-gray-1000">
             Hi! {firstName} <br /> {lastName} 👋
           </h2>
-          <p className="text-g-gray-800 font-medium text-sm">{formatDate()}</p>
+          <p className="text-g-gray-800 font-medium text-sm">{todayLabel}</p>
         </div>
         <div className="">
           {/* <div>
@@ -217,13 +226,13 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
               <div>
                 <h3 className="text-g-gray-900 text-label-14 font-medium">Department</h3>
                 <p className="text-g-gray-1000 text-[18px] font-semibold">
-                  {profileData.result.employee.department.name}
+                  {profileData.result?.employee?.department?.name}
                 </p>
               </div>
               <div>
                 <h3 className="text-g-gray-900 text-label-14 font-medium">Shift</h3>
                 <p className="text-g-gray-1000 text-[18px] font-semibold">
-                  {profileData.result.employee.shift.name}
+                  {profileData.result?.employee?.shift?.name ?? "No shift assigned"}
                 </p>
               </div>{" "}
               <div>

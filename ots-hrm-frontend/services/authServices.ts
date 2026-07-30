@@ -240,6 +240,18 @@ export const handleResendCode = async (dispatch: AppDispatch, email: string, whi
     });
 };
 
+// Set password via the "Set Your Password" link sent in the welcome email
+export const setPasswordViaToken = async (
+  dispatch: AppDispatch,
+  payload: { token: string; newPassword: string }
+): Promise<boolean> => {
+  const response = await apiHandler(dispatch, "post", "/auth/set-password", {
+    data: payload,
+    successMessage: "Password set successfully!",
+  });
+  return !!response;
+};
+
 // SignUp with Invite API
 export const signUpWithInvite = async (
   dispatch: AppDispatch,

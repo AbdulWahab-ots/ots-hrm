@@ -1235,6 +1235,24 @@ export const getEmployeeByIdAPI = async (
   );
 };
 
+// Triggers a fresh "Set Your Password" email for an existing employee — the only
+// admin-facing way to help an employee get a new password (passwords are bcrypt-hashed
+// and never recoverable/displayable).
+export const sendSetPasswordEmailAPI = async (
+  dispatch: AppDispatch,
+  employeeId: string
+): Promise<boolean> => {
+  const response = await apiHandler(
+    dispatch,
+    "post",
+    `/employee/${employeeId}/send-set-password-email`,
+    {
+      successMessage: "Set-password email sent successfully!",
+    }
+  );
+  return !!response;
+};
+
 export const createEmployeeAPI = async (
   dispatch: AppDispatch,
   payload: EmployeePayload

@@ -3,12 +3,13 @@ import { EmployeeRepository, RoleRepository, UserRepository } from "../dal";
 import { Employee, Role, User, EmployeeBenefit } from "../entities";
 import { Actions, IEmployeeRequest, IEmployeeResponse, IEmployeeSetupWarning, IEmployeeStatsResponse, ITokenUser } from "../models";
 import { Service } from "./generics/service";
-import { encrypt } from "../utility";
+import { encrypt, generateSetPasswordToken } from "../utility";
 import { Not } from "typeorm";
 import { AppError } from "../utility/app-error";
 import { UserShiftService } from "./user-shift-service";
 import { EmployeeBenefitService } from "./employee-benefit-service";
 import { generateEmployeeCode } from "../utility/employee-code";
+import { sendWelcomeEmail, sendSetPasswordEmail } from "../utility/mail-utility";
 
 @injectable()
 export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmployeeRequest> {
@@ -37,6 +38,36 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
             },
         });
         return employee ? employee.toResponse() : null;
+    }
+
+    // Lets an admin trigger a fresh "Set Your Password" email instead of ever setting or
+    // viewing an employee's password directly — passwords are bcrypt-hashed and are never
+    // recoverable, so this is the only supported way to help an employee get a new one.
+    public async sendSetPasswordEmail(employeeId: string, contextUser: ITokenUser): Promise<boolean> {
+        const employee = await this.employeeRepository.firstOrDefault({
+            where: { id: employeeId, companyId: contextUser.companyId },
+            relations: { user: true },
+        });
+
+        if (!employee || !employee.user) {
+            throw new AppError("Employee not found.", "404");
+        }
+
+        const setPasswordToken = generateSetPasswordToken({ userId: employee.user.id, email: employee.user.email });
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const setPasswordLink = `${frontendUrl}/set-new-password?token=${setPasswordToken}`;
+
+        const emailSent = await sendSetPasswordEmail(employee.user.email, {
+            name: `${employee.user.firstName} ${employee.user.lastName}`,
+            email: employee.user.email,
+            setPasswordLink,
+        });
+
+        if (!emailSent) {
+            throw new AppError("Failed to send the set-password email. Please try again.", "500");
+        }
+
+        return true;
     }
 
     public async add(entityRequest: IEmployeeRequest, contextUser: ITokenUser): Promise<IEmployeeResponse> {
@@ -139,6 +170,30 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
                 const message = shiftError instanceof Error ? shiftError.message : 'Unknown error occurred';
                 warnings.push({ step: 'shift', message: `Failed to assign shift: ${message}` });
             }
+        }
+
+        // Best-effort welcome email with a "Set Your Password" link. Does not block or roll
+        // back employee creation if it fails — surfaced as a warning instead, same as the
+        // benefits/shift steps above.
+        try {
+            const setPasswordToken = generateSetPasswordToken({ userId: user.id, email: user.email });
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const setPasswordLink = `${frontendUrl}/set-new-password?token=${setPasswordToken}`;
+
+            const emailSent = await sendWelcomeEmail(user.email, {
+                name: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+                setPasswordLink,
+            });
+
+            if (!emailSent) {
+                console.error(`Failed to send welcome email to ${user.email} for new employee ${employeeCreated.id}`);
+                warnings.push({ step: 'welcomeEmail', message: `Failed to send the welcome/set-password email to ${user.email}. Please resend it manually.` });
+            }
+        } catch (emailError) {
+            const message = emailError instanceof Error ? emailError.message : 'Unknown error occurred';
+            console.error(`Error sending welcome email for new employee ${employeeCreated.id}:`, emailError);
+            warnings.push({ step: 'welcomeEmail', message: `Failed to send the welcome/set-password email: ${message}` });
         }
 
         // Return the employee with benefits loaded

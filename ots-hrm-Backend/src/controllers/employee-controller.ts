@@ -75,6 +75,12 @@ export class EmployeeController extends ControllerBase {
                 path: `${CommonRoutes.getById}/:id/with-shift`,
                 middlewares: [paramsValidator(uuidParamSchema)],
                 handler: this.getEmployeeWithShift as RouteHandlerMethod
+            },
+            {
+                method: 'POST',
+                path: `:id/send-set-password-email`,
+                middlewares: [paramsValidator(uuidParamSchema)],
+                handler: this.sendSetPasswordEmail as RouteHandlerMethod
             }
 
         ];
@@ -197,6 +203,15 @@ export class EmployeeController extends ControllerBase {
                     await this.employeeService.getEmployeesWithShifts(request.user)
                 )
             );
+        }
+    }
+
+    private sendSetPasswordEmail = async (req: FastifyRequest<{Params: {id: string}}>, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            await this.employeeService.sendSetPasswordEmail(req.params.id, request.user);
+            res.send(AppResponse.success("Set-password email sent successfully"));
         }
     }
 

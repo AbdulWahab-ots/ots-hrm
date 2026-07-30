@@ -1,28 +1,22 @@
-// app/auth/signin/page.tsx
-import AuthLayoutContent from "@/components/auth/AuthLayoutContent";
+import { Suspense } from "react";
+
 import SetNewPassword from "@/components/auth/SetNewPassword";
-import AuthLayout from "@/components/layouts/AuthLayout";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 export const generateMetadata = () => ({
-  title: "Sign In | SmartHR",
-  description: "Access your SmartHR account securely with email and password authentication.",
+  title: "Set Password | SmartHR",
+  description: "Set your password to activate your OTS HRM account.",
   keywords: [
-    "SmartHR login",
-    "employee portal",
-    "HR system sign in",
-    "workplace authentication",
-    "secure HR access"
+    "SmartHR set password",
+    "employee onboarding",
+    "HR system account activation",
   ]
 });
 
-export default function SignInPage() {
+export default function SetNewPasswordPage() {
   return (
-    <AuthLayout leftContent={
-      <AuthLayoutContent
-        title="Igniting Employee Potential"
-        description="Efficiently manage your workforce, streamline operations effectively." />}
-    >
+    <Suspense fallback={<LoadingSpinner />}>
       <SetNewPassword />
-    </AuthLayout>
+    </Suspense>
   );
 }

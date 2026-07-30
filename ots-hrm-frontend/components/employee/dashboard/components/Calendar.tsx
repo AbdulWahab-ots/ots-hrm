@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Video } from "lucide-react";
 import Meeting from "../../../../public/Meeting.svg";
 import Image from "next/image";
@@ -13,11 +13,23 @@ interface Event {
 }
 
 export default function Calendar() {
-  const today = new Date();
+  // "Today" depends on the render instant, which differs between the server's SSR pass
+  // and the client's hydration pass — don't compute it until after mount, so the initial
+  // server/client markup match and React doesn't report a hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  const [today, setToday] = useState(() => new Date());
   const [currentDate, setCurrentDate] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
   const [selectedDate, setSelectedDate] = useState(today);
+
+  useEffect(() => {
+    const now = new Date();
+    setToday(now);
+    setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDate(now);
+    setMounted(true);
+  }, []);
 
   const events: Event[] = [
     {
@@ -70,6 +82,19 @@ export default function Calendar() {
 
   const selectedDateStr = selectedDate.toISOString().split("T")[0];
   const filteredEvents = events.filter((e) => e.date === selectedDateStr);
+
+  if (!mounted) {
+    return (
+      <div className="xl:col-span-3 rounded-[var(--g-radius-md)] border-[1px] border-g-gray-alpha-400 p-6 bg-g-background-100 shadow-geist-card animate-pulse">
+        <div className="h-6 w-32 bg-gray-200 rounded mb-4" />
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 35 }, (_, i) => (
+            <div key={i} className="h-8 rounded-full bg-gray-100" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="xl:col-span-3 rounded-[var(--g-radius-md)] border-[1px] border-g-gray-alpha-400 p-6 bg-g-background-100 shadow-geist-card ">

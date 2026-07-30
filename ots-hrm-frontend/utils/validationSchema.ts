@@ -125,6 +125,20 @@ export const ResetPasswordValidationSchema = Yup.object({
     .required('Confirm password is required'),
 })
 
+// Mirrors the backend's setPasswordSchema so client + server validation agree.
+export const SetPasswordValidationSchema = Yup.object({
+  newPassword: Yup.string()
+    .required('Password is required')
+    .min(8, 'Password must be at least 8 characters')
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+      'Must include upper, lower, a number and a special character'
+    ),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('newPassword')], 'Passwords must match')
+    .required('Confirm password is required'),
+})
+
 export const addNewRoleValidationSchema = Yup.object().shape({
   name: Yup.string().required("Name is required")
 });
@@ -379,6 +393,33 @@ export const EmployeeValidationSchema = [
       .required("Account number is required"),
   }),
 ];
+
+// Editing an employee never sets/displays a password from this form — password changes
+// only happen via the "Set Password" email flow — so step 1 drops that requirement.
+export const EmployeeEditValidationSchema = [
+  Yup.object({
+    user: Yup.object({
+      userName: Yup.string()
+        .matches(/^\S+$/, "Username must not contain spaces")
+        .required("Username is required"),
+      firstName: Yup.string().required("First name is required"),
+      lastName: Yup.string().required("Last name is required"),
+      email: Yup.string().email("Invalid email").required("Email is required"),
+    }),
+    phoneNumber: Yup.string().required("Phone number is required"),
+    employeeCode: Yup.string()
+      .matches(/^EMP-.+$/, "Employee code must be in format EMP-XXX")
+      .required("Employee code is required"),
+    departmentId: Yup.string().required("Department is required"),
+    designationId: Yup.string().required("Designation is required"),
+    shiftId: Yup.string().required("Shift is required"),
+    joiningDate: Yup.string().required("Joining date is required"),
+    status: Yup.string().required("Status is required"),
+  }),
+  EmployeeValidationSchema[1],
+  EmployeeValidationSchema[2],
+];
+
 export const InviteValidationSchema = Yup.object().shape({
   emailInput: Yup.string()
     .email("Please enter a valid email address")

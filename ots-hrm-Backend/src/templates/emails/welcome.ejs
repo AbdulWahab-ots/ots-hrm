@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Email</title>
+    <title>Welcome to OTS HRM</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,6 +34,18 @@
             border-radius: 5px;
             margin: 20px 0;
         }
+        .fallback-link {
+            word-break: break-all;
+            color: #667eea;
+        }
+        .expiry-note {
+            background: #fff3cd;
+            border-left: 4px solid #ffcc02;
+            padding: 12px 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -44,16 +56,25 @@
 </head>
 <body>
     <div class="header">
-        <h1>Welcome <%= name %>! 🎉</h1>
+        <h1>Welcome to OTS HRM, <%= name %></h1>
     </div>
     <div class="content">
-        <p>Thank you for joining our platform! We're excited to have you on board.</p>
-        <p>Your email address <strong><%= email %></strong> has been successfully registered.</p>
-        <p>Get started by exploring our features and setting up your profile.</p>
-        <a href="#" class="button">Get Started</a>
+        <p>An account has been created for you at OTS HRM.</p>
+        <p>Your login email is <strong><%= email %></strong>.</p>
+        <% if (typeof setPasswordLink !== 'undefined' && setPasswordLink) { %>
+            <p>Before you can sign in, please set your password:</p>
+            <a href="<%= setPasswordLink %>" class="button">Set Your Password</a>
+            <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+            <p class="fallback-link"><%= setPasswordLink %></p>
+            <div class="expiry-note">
+                <strong>Note:</strong> this link expires in 3 days. If it has expired, ask your admin to create your account invitation again.
+            </div>
+        <% } %>
+        <p>If you weren't expecting this email, you can safely ignore it.</p>
     </div>
     <div class="footer">
-        <p>© 2024 Your Company Name. All rights reserved.</p>
+        <p>&copy; <%= new Date().getFullYear() %> OTS HRM. All rights reserved.</p>
+        <p>This is an automated message, please do not reply.</p>
     </div>
 </body>
 </html>
