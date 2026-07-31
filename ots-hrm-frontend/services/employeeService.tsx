@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import api, { axiosWithAuth } from "@/lib/api";
 import { setDepartmentData } from "@/store/features/admin/department/departmentSlice";
 import { setDesignationData } from "@/store/features/admin/designation/designationSlice";
@@ -170,7 +171,7 @@ export const checkIn = async (dispatch: AppDispatch, data: any) => {
 
 // Check-out api
 export const checkOut = async (dispatch: AppDispatch, data: any) => {
-  const currentDate = new Date().toISOString().split("T")[0];
+  const currentDate = format(new Date(), "yyyy-MM-dd");
 
   return apiHandler(dispatch, "post", "/attendance/check-out", {
     data: data,
@@ -187,7 +188,7 @@ export const fetchEmployeeAttendance = async (
   startDate?: string,
   endDate?: string
 ) => {
-  const currentDate = new Date().toISOString().split("T")[0];
+  const currentDate = format(new Date(), "yyyy-MM-dd");
   const start = startDate || currentDate;
   const end = endDate || currentDate;
 
@@ -302,6 +303,11 @@ export const fetchAllVacation = async (dispatch: AppDispatch) => {
       },
     },
   });
+};
+
+// Fetch company-wide leave-request counts by status, for the Admin Leaves page summary cards
+export const fetchLeaveStats = async (dispatch: AppDispatch) => {
+  return apiHandler(dispatch, "get", "/vacation/leave-stats", {});
 };
 
 // Fetch any vacation by Id

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useEffect, useState } from "react";
+import { format } from "date-fns";
 import Button from "@/components/common/Button";
 import InputField from "@/components/common/form/InputField";
 import SearchableDropdown from "@/components/common/form/SearchableDropdown";
@@ -150,7 +151,7 @@ const CreateHoliday = ({
           errors,
         }) => (
           <Form className="">
-            <div className="lg:h-[620px] h-screen">
+            <div>
               <div className="p-6 bg-g-background-100 sm:rounded-3xl rounded-2xl lg:rounded-[32px] border-(--genrel-light-stroke) border-[1px]">
                 <div className="flex pb-4 items-center gap-4">
                   <ToggleButton
@@ -280,20 +281,22 @@ const CreateHoliday = ({
               isOpen={isDateModalOpen}
               onClose={handleCloseDateModal}
               onSave={(range) => {
+                // toISOString() rolls local midnight back a day for any timezone
+                // ahead of UTC (e.g. PKT) — format() reads the local calendar date.
                 if (values.isMultiple) {
                   setFieldValue(
                     "dates",
                     range.startDate && range.endDate
                       ? [
-                        range.startDate.toISOString(),
-                        range.endDate.toISOString(),
+                        format(range.startDate, "yyyy-MM-dd"),
+                        format(range.endDate, "yyyy-MM-dd"),
                       ]
                       : []
                   );
                 } else {
                   setFieldValue(
                     "dates",
-                    range.startDate ? [range.startDate.toISOString()] : []
+                    range.startDate ? [format(range.startDate, "yyyy-MM-dd")] : []
                   );
                 }
                 handleCloseDateModal();
@@ -317,6 +320,9 @@ const CreateHoliday = ({
               <Button
                 type="submit"
                 variant="filled"
+                fullWidth={false}
+                rounded="full"
+                className="px-8"
                 label={
                   initialValues?.name ? "Update Holiday" : "Create Holiday"
                 }

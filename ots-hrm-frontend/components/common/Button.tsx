@@ -16,6 +16,10 @@ type ButtonProps = {
   // for buttons that sit in a shrink-to-fit container (e.g. a modal/form action bar) —
   // width:100% there resolves against a circularly-sized ancestor and collapses the button.
   fullWidth?: boolean;
+  // Defaults to "sm" (the standard button radius used everywhere). Set to "full" for a
+  // pill shape — used where the button sits inside a large-radius container (e.g.
+  // FormActionBar) and should visually complement its rounding.
+  rounded?: "sm" | "full";
 };
 
 const Button = ({
@@ -30,9 +34,10 @@ const Button = ({
   variant = "filled",
   isLoading = false,
   fullWidth = true,
+  rounded = "sm",
 }: ButtonProps) => {
   // Base styles
-  const baseStyles = `flex ${fullWidth ? "w-full" : "w-auto"} text-nowrap items-center justify-center gap-2 text-button-14 lg:text-button-16 py-3 px-4 border rounded-[var(--g-radius-sm)] transition-all duration-150`;
+  const baseStyles = `flex ${fullWidth ? "w-full" : "w-auto"} text-nowrap items-center justify-center gap-2 text-button-14 lg:text-button-16 py-3 px-4 border ${rounded === "full" ? "rounded-[var(--g-radius-full)]" : "rounded-[var(--g-radius-sm)]"} transition-all duration-150`;
 
   // Filled variant styles
   const filledStyles = `

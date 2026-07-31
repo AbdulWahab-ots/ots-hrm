@@ -5,7 +5,7 @@ import { NotificationService } from "./notification-service";
 import { NotificationType } from "../models";
 import { WorkingDaysService } from "./working-days-service";
 import { Vacation, Attendance } from "../entities";
-import { IFetchRequest,  FilterMatchModes, FilterOperators, IVacationStatusRequest, ITokenUser, IVacationRequest, IVacationResponse, VacationStatus, IDataSourceResponse, RequestType, AttendanceStatus, Actions } from "../models";
+import { IFetchRequest,  FilterMatchModes, FilterOperators, IVacationStatusRequest, ITokenUser, IVacationRequest, IVacationResponse, VacationStatus, IDataSourceResponse, RequestType, AttendanceStatus, Actions, ILeaveStatsResponse } from "../models";
 import { Service } from "./generics/service";
 import { AppError } from "../utility/app-error";
 import { Between, LessThanOrEqual, MoreThanOrEqual, Equal, Or, Not, In } from "typeorm";
@@ -408,6 +408,34 @@ export class VacationService extends Service<Vacation, IVacationResponse, IVacat
             totalRemoteWorkDays,
             approvedRemoteWorkDays,
             pendingRemoteWorkDays
+        };
+    }
+
+    // Company-wide leave-request counts by status, for the Admin Leaves page summary
+    // cards. getAllRecords must be explicit — the default page size is 10, which would
+    // silently undercount once a company has more than 10 leave requests.
+    public async getLeaveStats(contextUser: ITokenUser): Promise<ILeaveStatsResponse> {
+        const fetchRequest: IFetchRequest<IVacationRequest> = {
+            pagedListRequest: { pageNo: 1, pageSize: 1, getAllRecords: true },
+            queryOptionsRequest: {
+                filtersRequest: [
+                    {
+                        field: 'requestType' as keyof IVacationRequest,
+                        matchMode: FilterMatchModes.Equal,
+                        operator: FilterOperators.And,
+                        value: RequestType.LEAVE
+                    }
+                ]
+            }
+        };
+
+        const response = await super.get(contextUser, fetchRequest);
+        const requests = response.data || [];
+
+        return {
+            pending: requests.filter((r: any) => r.status === VacationStatus.PENDING).length,
+            approved: requests.filter((r: any) => r.status === VacationStatus.APPROVED).length,
+            rejected: requests.filter((r: any) => r.status === VacationStatus.REJECTED).length,
         };
     }
 

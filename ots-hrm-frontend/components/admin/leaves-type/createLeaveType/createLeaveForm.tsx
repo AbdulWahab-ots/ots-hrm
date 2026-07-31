@@ -27,7 +27,7 @@ const CreateLeave = ({
   initialValues,
   onSubmit,
   onCancel,
-  className = "h-[620px]",
+  className = "",
 }: CreateLeaveProps) => {
   const departments = useSelector(
     (state: RootState) => state.department.departmentData
@@ -173,6 +173,9 @@ const CreateLeave = ({
                 <Button
                   type="submit"
                   variant="filled"
+                  fullWidth={false}
+                  rounded="full"
+                  className="px-8"
                   label={
                     initialValues?.name
                       ? "Update Leave Type"

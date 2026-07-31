@@ -20,3 +20,10 @@ export interface IVacationResponse extends ICompanyResponseBase {
     actionByUser?: any;       // User who took action (approved/rejected)
     leaveType?: any;          // Leave type details
 }
+
+// Company-wide counts by status, for the Admin Leaves page summary cards.
+export interface ILeaveStatsResponse {
+    pending: number;
+    approved: number;
+    rejected: number;
+}

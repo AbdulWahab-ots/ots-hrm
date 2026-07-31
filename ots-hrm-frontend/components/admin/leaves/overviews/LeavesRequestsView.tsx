@@ -1,31 +1,33 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/store/store";
 import { StatsCard } from "./StatCard";
-import SegmentedTabs from "@/components/common/SegmentedTabs";
+import { fetchLeaveStats } from "@/services/employeeService";
 
-const dashboardData = {
-  daily: { totalCompanies: 105, active: 65, inactive: 30 },
-  weekly: { totalCompanies: 98, active: 42, inactive: 56 },
-  monthly: { totalCompanies: 92, active: 30, inactive: 56 },
-  yearly: { totalCompanies: 100, active: 60, inactive: 40 },
-};
-
-const PERIOD_OPTIONS: {
-  value: "daily" | "weekly" | "monthly" | "yearly";
-  label: string;
-}[] = [
-  { value: "daily", label: "D" },
-  { value: "weekly", label: "W" },
-  { value: "monthly", label: "M" },
-  { value: "yearly", label: "Y" },
-];
+interface LeaveStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+}
 
 const LeavesRequestsView = () => {
-  const [activeFilter, setActiveFilter] = useState<
-    "daily" | "weekly" | "monthly" | "yearly"
-  >("daily");
+  const dispatch = useDispatch<AppDispatch>();
+  const [stats, setStats] = useState<LeaveStats>({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
 
-  const currentData = dashboardData[activeFilter];
+  useEffect(() => {
+    const loadStats = async () => {
+      const response = await fetchLeaveStats(dispatch);
+      if (response?.result) {
+        setStats(response.result);
+      }
+    };
+    loadStats();
+  }, [dispatch]);
 
   return (
     <div>
@@ -33,33 +35,13 @@ const LeavesRequestsView = () => {
         <p className="text-base font-medium text-(--genrel-text-light)">
           Total Leaves
         </p>
-        <SegmentedTabs
-          options={PERIOD_OPTIONS}
-          value={activeFilter}
-          onChange={setActiveFilter}
-        />
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <StatsCard
-          title="Decline"
-          value={currentData.totalCompanies}
-          activeValue={currentData.active}
-          inactiveValue={currentData.inactive}
-        />
-        <StatsCard
-          title="Approved"
-          value={currentData.active}
-          activeValue={currentData.active}
-          inactiveValue={currentData.inactive}
-        />
-        <StatsCard
-          title="Pending"
-          value={currentData.inactive}
-          activeValue={currentData.active}
-          inactiveValue={currentData.inactive}
-        />
+        <StatsCard title="Decline" value={stats.rejected} />
+        <StatsCard title="Approved" value={stats.approved} />
+        <StatsCard title="Pending" value={stats.pending} />
       </div>
     </div>
   );

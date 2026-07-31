@@ -380,6 +380,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import Button from "@/components/common/Button";
@@ -680,10 +681,14 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
               isOpen={isFromDateModalOpen}
               onClose={() => setIsFromDateModalOpen(false)}
               onSave={(range) => {
+                // toISOString() converts through UTC first, which rolls local midnight
+                // back a day in any timezone ahead of UTC (e.g. PKT) — format() reads
+                // the local calendar date directly.
                 if (range.startDate) {
-                  setFieldValue("fromDate", range.startDate.toISOString());
+                  const formatted = format(range.startDate, "yyyy-MM-dd");
+                  setFieldValue("fromDate", formatted);
                   if (!values.isMultiple) {
-                    setFieldValue("toDate", range.startDate.toISOString());
+                    setFieldValue("toDate", formatted);
                   }
                 }
                 setIsFromDateModalOpen(false);
@@ -700,7 +705,7 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
               onClose={() => setIsToDateModalOpen(false)}
               onSave={(range) => {
                 if (range.startDate) {
-                  setFieldValue("toDate", range.startDate.toISOString());
+                  setFieldValue("toDate", format(range.startDate, "yyyy-MM-dd"));
                 }
                 setIsToDateModalOpen(false);
               }}
@@ -716,8 +721,9 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
               onClose={() => setIsSingleDateModalOpen(false)}
               onSave={(range) => {
                 if (range.startDate) {
-                  setFieldValue("fromDate", range.startDate.toISOString());
-                  setFieldValue("toDate", range.startDate.toISOString());
+                  const formatted = format(range.startDate, "yyyy-MM-dd");
+                  setFieldValue("fromDate", formatted);
+                  setFieldValue("toDate", formatted);
                 }
                 setIsSingleDateModalOpen(false);
               }}
@@ -732,6 +738,9 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
               <Button
                 type="submit"
                 variant="filled"
+                fullWidth={false}
+                rounded="full"
+                className="px-8"
                 label="Apply for Leave"
                 isLoading={isSubmitting}
                 disabled={isSubmitting || !isValid}

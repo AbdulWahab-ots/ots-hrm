@@ -506,6 +506,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { TanstackTable } from "@/components/common/TanstackTable";
@@ -642,11 +643,11 @@ const RequestTable = () => {
         endDate.setHours(23, 59, 59, 999);
     }
 
-    // Convert PKT dates to UTC for API (subtract 5 hours)
-    const startDateUTC = new Date(startDate.getTime() - 5 * 60 * 60 * 1000);
-    const endDateUTC = new Date(endDate.getTime() - 5 * 60 * 60 * 1000);
-
-    return { startDate: startDateUTC, endDate: endDateUTC };
+    // No manual UTC conversion needed here — format() (used where these dates are
+    // consumed) reads the local calendar date directly, so there's no timezone to
+    // compensate for. A hardcoded -5h offset only ever worked for PKT specifically
+    // and silently broke for every other timezone.
+    return { startDate, endDate };
   }, [activeFilter]);
 
   useEffect(() => {
@@ -704,8 +705,8 @@ const RequestTable = () => {
           operator: 1,
           matchMode: 10,
           rangeValues: {
-            start: startDate.toISOString().split("T")[0],
-            end: endDate.toISOString().split("T")[0],
+            start: format(startDate, "yyyy-MM-dd"),
+            end: format(endDate, "yyyy-MM-dd"),
           },
         });
 
@@ -737,20 +738,13 @@ const RequestTable = () => {
         }
 
         if (selectedRange.startDate && selectedRange.endDate) {
-          const startDateUTC = new Date(
-            selectedRange.startDate.getTime() - 5 * 60 * 60 * 1000
-          );
-          const endDateUTC = new Date(
-            selectedRange.endDate.getTime() - 5 * 60 * 60 * 1000
-          );
-          endDateUTC.setHours(23, 59, 59, 999);
           payload.queryOptionsRequest.filtersRequest.push({
             field: "date",
             operator: 1,
             matchMode: 10,
             rangeValues: {
-              start: startDateUTC.toISOString().split("T")[0],
-              end: endDateUTC.toISOString().split("T")[0],
+              start: format(selectedRange.startDate, "yyyy-MM-dd"),
+              end: format(selectedRange.endDate, "yyyy-MM-dd"),
             },
           });
         }

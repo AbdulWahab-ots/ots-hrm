@@ -79,6 +79,11 @@ export class VacationController extends ControllerBase {
                 path: 'remote-work-stats',
                 handler: this.getRemoteWorkStats as RouteHandlerMethod
             },
+            {
+                method: 'GET',
+                path: 'leave-stats',
+                handler: this.getLeaveStats as RouteHandlerMethod
+            },
         ];
 
     }
@@ -193,6 +198,17 @@ export class VacationController extends ControllerBase {
             res.send(AppResponse.success(
                 'Remote work statistics fetched successfully',
                 await this.vacationService.getRemoteWorkStats(request.user)
+            ));
+        }
+    }
+
+    private getLeaveStats = async (req: FastifyRequest, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            res.send(AppResponse.success(
+                'Leave statistics fetched successfully',
+                await this.vacationService.getLeaveStats(request.user)
             ));
         }
     }

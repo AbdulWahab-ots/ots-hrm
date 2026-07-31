@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { ChevronLeft, ChevronRight, Video } from "lucide-react";
 import Meeting from "../../../../public/Meeting.svg";
 import Image from "next/image";
@@ -80,7 +81,7 @@ export default function Calendar() {
     setSelectedDate(new Date(year, currentDate.getMonth(), day));
   };
 
-  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
   const filteredEvents = events.filter((e) => e.date === selectedDateStr);
 
   if (!mounted) {

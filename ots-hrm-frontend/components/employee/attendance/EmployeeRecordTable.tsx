@@ -276,6 +276,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { TanstackTable } from "../../common/TanstackTable";
@@ -344,9 +345,10 @@ const EmployeeRecordTable = ({
         const startDate = `${currentYear}-01-01`;
 
         // end date = current year ka current month ka last din
-        const endDate = new Date(currentYear, today.getMonth() + 1, 0) // 0 = last day of previous month
-          .toISOString()
-          .split("T")[0];
+        const endDate = format(
+          new Date(currentYear, today.getMonth() + 1, 0), // 0 = last day of previous month
+          "yyyy-MM-dd"
+        );
         // Map UI status values to API status values
         const statusMapping: Record<string, string> = {
           Present: "PRESENT",

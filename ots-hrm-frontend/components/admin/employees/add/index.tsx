@@ -319,7 +319,7 @@ const CreateEmployee = ({
             }) => (
               <Form>
                 {step === 1 && (
-                  <div className=" h-full md:h-[800px]">
+                  <div>
                     <div className="bg-g-background-100 p-4 lg:p-6 lg:rounded-[var(--g-radius-lg)] rounded-[var(--g-radius-lg)] shadow-geist-card grid lg:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
                         <ImageUpload
@@ -488,7 +488,7 @@ const CreateEmployee = ({
                   </div>
                 )}
                 {step === 2 && (
-                  <div className="h-full md:h-[600px] bg-g-background-100 p-4 lg:p-6 lg:rounded-[var(--g-radius-lg)] rounded-[var(--g-radius-lg)] shadow-geist-card gap-6 mb-4 border-[1px] border-g-gray-alpha-400 items-center justify-between w-full">
+                  <div className="bg-g-background-100 p-4 lg:p-6 lg:rounded-[var(--g-radius-lg)] rounded-[var(--g-radius-lg)] shadow-geist-card gap-6 mb-4 border-[1px] border-g-gray-alpha-400 items-center justify-between w-full">
                     <h2 className="text-heading-24 text-g-gray-1000">
                       What are the benefits for your employee
                     </h2>
@@ -594,6 +594,7 @@ const CreateEmployee = ({
                     type="submit"
                     variant="filled"
                     fullWidth={false}
+                    rounded="full"
                     className="px-8"
                     label={
                       step < 3
@@ -768,6 +769,9 @@ const CreateEmployee = ({
                   <Button
                     type="button"
                     variant="filled"
+                    fullWidth={false}
+                    rounded="full"
+                    className="px-8"
                     label="Send Invite"
                     onClick={handleSendInvite}
                     disabled={inviteEmails.length === 0}

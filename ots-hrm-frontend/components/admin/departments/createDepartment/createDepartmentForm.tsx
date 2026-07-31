@@ -144,6 +144,9 @@ const CreateDepartment = ({
               <Button
                 type="submit"
                 variant="filled"
+                fullWidth={false}
+                rounded="full"
+                className="px-8"
                 label={
                   safeInitialValues.name
                     ? "Update Department"

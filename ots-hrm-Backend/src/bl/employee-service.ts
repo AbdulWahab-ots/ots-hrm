@@ -406,8 +406,11 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
     }
 
     public async getStats(contextUser: ITokenUser): Promise<IEmployeeStatsResponse> {
-
-        let employees = await super.get(contextUser);
+        // getAllRecords must be explicit — the default page size is 10, which would
+        // silently undercount every stat below once a company has more than 10 employees.
+        let employees = await super.get(contextUser, {
+            pagedListRequest: { pageNo: 1, pageSize: 1, getAllRecords: true }
+        });
         let totalEmployees = employees.data.length;
         let activeEmployees = employees.data.filter(emp => emp.active === true).length;
         let inactiveEmployees = employees.data.filter(emp => emp.active === false).length;

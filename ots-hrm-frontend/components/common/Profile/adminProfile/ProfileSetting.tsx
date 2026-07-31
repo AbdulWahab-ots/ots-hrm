@@ -139,6 +139,7 @@ const EditProfile = forwardRef<BasicInfoFormHandle, EditProfileProps>(
                 <Button
                   variant="filled"
                   fullWidth={false}
+                  rounded="full"
                   className="px-8"
                   label="Save"
                   isLoading={isSubmitting}

@@ -25,7 +25,7 @@ const CreateShift = ({
   initialValues,
   onSubmit,
   onCancel,
-  className = "lg:h-[620px] ",
+  className = "",
 }: CreateShiftProps) => {
   const departments = useSelector(
     (state: RootState) => state.department.departmentData
@@ -137,7 +137,7 @@ const CreateShift = ({
           touched,
         }) => (
           <Form className="">
-            <div className={`${className} h-full lg:mb-0 mb-6`}>
+            <div className={`${className} lg:mb-0 mb-6`}>
               <div className="p-6 bg-g-background-100 rounded-[var(--g-radius-md)] border-(--genrel-light-stroke) border-[1px] shadow-geist-card">
                 <div className="grid lg:grid-cols-2 gap-6">
                   <InputField
@@ -193,6 +193,9 @@ const CreateShift = ({
               <Button
                 type="submit"
                 variant="filled"
+                fullWidth={false}
+                rounded="full"
+                className="px-8"
                 label={initialValues?.name ? "Update Shift" : "Create Shift"}
                 isLoading={isSubmitting}
                 disabled={isSubmitting || !isValid}

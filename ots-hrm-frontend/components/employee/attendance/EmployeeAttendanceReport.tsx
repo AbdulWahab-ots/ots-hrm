@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { format } from "date-fns";
 import Button from "@/components/common/Button";
 import CustomDropdown from "@/components/common/form/DropDown";
 import CalendarTable from "./Calendar";
@@ -200,7 +201,7 @@ const EmployeeAttendanceReport = ({
 
           if (record) {
             let newDay = { ...day };
-            const isToday = dateStr === new Date().toISOString().split("T")[0];
+            const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
             if (record.status === "Absent") {
               newDay.status = "absent";
             } else if (record.status === "Pending") {

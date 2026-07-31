@@ -25,7 +25,7 @@ const CreateDesignation = ({
   initialValues,
   onSubmit,
   onCancel,
-  className = "lg:h-[393px]",
+  className = "",
 }: CreateDesignationProps) => {
   const departments = useSelector(
     (state: RootState) => state.department.departmentData
@@ -80,7 +80,7 @@ const CreateDesignation = ({
 
           return (
             <Form className="">
-              <div className={`${className} h-full`}>
+              <div className={className}>
                 <div className="p-6 bg-g-background-100 rounded-[var(--g-radius-md)] border-(--genrel-light-stroke) border-[1px] shadow-geist-card">
                   <div className="grid lg:grid-cols-2 gap-6">
                     <InputField
@@ -108,6 +108,9 @@ const CreateDesignation = ({
                 <Button
                   type="submit"
                   variant="filled"
+                  fullWidth={false}
+                  rounded="full"
+                  className="px-8"
                   label={
                     initialValues?.title
                       ? "Update Designation"

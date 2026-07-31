@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ArrowUpToLine, Plus } from "lucide-react";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmation";
@@ -208,8 +209,8 @@ const BenefitsTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          start: selectedRange.startDate.toISOString().split("T")[0],
-          end: selectedRange.endDate.toISOString().split("T")[0],
+          start: format(selectedRange.startDate, "yyyy-MM-dd"),
+          end: format(selectedRange.endDate, "yyyy-MM-dd"),
         },
       });
     }

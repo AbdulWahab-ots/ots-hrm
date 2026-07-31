@@ -94,6 +94,7 @@ const ChangePassword = forwardRef<
                 type="submit"
                 variant="filled"
                 fullWidth={false}
+                rounded="full"
                 className="px-8"
                 label="Save"
                 isLoading={isSubmitting}

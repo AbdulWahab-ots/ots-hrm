@@ -52,7 +52,7 @@ const CreateBenefit = ({
   initialValues,
   onSubmit,
   onCancel,
-  className = "lg:h-[620px]",
+  className = "",
 }: CreateBenefitProps) => {
   const departments = useSelector(
     (state: RootState) => state.department.departmentData
@@ -118,7 +118,7 @@ const CreateBenefit = ({
 
           return (
             <Form className="">
-              <div className={`${className} h-full`}>
+              <div className={className}>
                 <div className="p-6 bg-g-background-100 rounded-[var(--g-radius-md)] border-(--genrel-light-stroke) border-[1px] shadow-geist-card">
                   <div className="grid lg:grid-cols-2 gap-6">
                     <InputField
@@ -196,6 +196,9 @@ const CreateBenefit = ({
                 <Button
                   type="submit"
                   variant="filled"
+                  fullWidth={false}
+                  rounded="full"
+                  className="px-8"
                   label={
                     initialValues?.name ? "Update Benefit" : "Create Benefit"
                   }

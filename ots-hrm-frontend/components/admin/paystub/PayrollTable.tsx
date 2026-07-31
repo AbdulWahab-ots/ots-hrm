@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ArrowUpToLine } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -68,7 +69,9 @@ export function payrollToRow(p: any): Payroll {
     },
     department: { id: p.departmentId ?? "", name: p.department?.name ?? "—" },
     month: `${p.payrollYear}-${String(p.payrollMonth).padStart(2, "0")}`,
-    date: p.approvedAt ? new Date(p.approvedAt).toISOString().slice(0, 10) : "",
+    // format() reads the local calendar date, so an approval timestamp near
+    // midnight displays on the day the approver actually saw, not its UTC date.
+    date: p.approvedAt ? format(new Date(p.approvedAt), "yyyy-MM-dd") : "",
     grossSalary: Number(p.grossSalary ?? 0),
     baseSalary: Number(p.basicSalary ?? 0),
     benefits: Number(p.totalAdditions ?? 0),

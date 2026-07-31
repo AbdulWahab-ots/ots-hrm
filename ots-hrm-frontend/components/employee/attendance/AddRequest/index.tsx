@@ -246,6 +246,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import CustomDropdown from "@/components/common/form/DropDown";
@@ -279,7 +280,7 @@ interface CreateAttendanceRequestProps {
 const CreateAttendanceRequest = ({
   onSubmit,
   onCancel,
-  className = "lg:h-[620px]",
+  className = "",
   initialRequestType,
   initialDate,
   selectedRecord,
@@ -384,7 +385,7 @@ const CreateAttendanceRequest = ({
           <Form className="" noValidate>
             {" "}
             {/* Added noValidate to avoid HTML warnings */}
-            <div className={`${className} h-full lg:mb-0 mb-6`}>
+            <div className={`${className} lg:mb-0 mb-6`}>
               <div className="p-6 bg-g-background-100 rounded-[var(--g-radius-lg)] border-(--genrel-light-stroke) border-[1px] shadow-geist-card">
                 <div className="grid lg:grid-cols-2 gap-6">
                   <CustomDropdown
@@ -413,7 +414,7 @@ const CreateAttendanceRequest = ({
                       onClick={handleOpenDateModal}
                     >
                       {selectedDate
-                        ? selectedDate.toISOString().split("T")[0]
+                        ? format(selectedDate, "yyyy-MM-dd")
                         : "Select date"}
                     </div>
                   </div>
@@ -451,10 +452,7 @@ const CreateAttendanceRequest = ({
               onClose={handleCloseDateModal}
               onSave={(range) => {
                 if (range.startDate) {
-                  setFieldValue(
-                    "date",
-                    range.startDate.toISOString().split("T")[0]
-                  );
+                  setFieldValue("date", format(range.startDate, "yyyy-MM-dd"));
                   setSelectedDate(range.startDate);
                 }
                 handleCloseDateModal();
@@ -467,6 +465,9 @@ const CreateAttendanceRequest = ({
               <Button
                 type="submit"
                 variant="filled"
+                fullWidth={false}
+                rounded="full"
+                className="px-8"
                 label="Create Request"
                 isLoading={isSubmitting}
                 disabled={isSubmitting || !isValid}

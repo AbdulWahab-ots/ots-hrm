@@ -5,18 +5,9 @@ import React, { useState } from "react";
 interface StatsCardProps {
   title: string;
   value: number;
-  change?: string;
-  activeValue?: number;
-  inactiveValue?: number;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({
-  title,
-  value,
-  change,
-  activeValue = 0,
-  inactiveValue = 0,
-}) => {
+export const StatsCard: React.FC<StatsCardProps> = ({ title, value }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   const getTooltipContent = () => {
@@ -46,11 +37,6 @@ export const StatsCard: React.FC<StatsCardProps> = ({
     }
   };
 
-  // Calculate percentages for progress bar
-  const total = activeValue + inactiveValue;
-  const activePercent = total > 0 ? (activeValue / total) * 100 : 0;
-  const inactivePercent = total > 0 ? (inactiveValue / total) * 100 : 0;
-
   return (
     <div className="bg-g-background-100 pt-6 p-4 rounded-[var(--g-radius-md)] border border-(--genrel-light-stroke) relative shadow-geist-card">
       {/* Title + Tooltip */}
@@ -78,30 +64,17 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       </div>
 
       {/* Value */}
-      <div className="flex justify-between items-end mb-6 lg:mb-10">
+      <div className="flex justify-between items-end mb-6 lg:mb-4">
         <span className="text-g-gray-1000 font-semibold text-3xl lg:text-[48px]">
           {value}
         </span>
       </div>
 
-      {/* Progress Bar */}
-      {total > 0 && (
-        <div className="w-full h-[64px]  gap-2  flex overflow-hidden">
-          <div
-            className="h-full rounded-[var(--g-radius-sm)]"
-            style={{
-              width: `${activePercent}%`,
-              backgroundColor: getActiveColor(),
-            }}
-          />
-          <div
-            className="bg-g-gray-alpha-200 flex justify-center items-center text-(--genrel-text-light) text-2xl font-normal h-full rounded-[var(--g-radius-sm)]"
-            style={{ width: `${inactivePercent}%` }}
-          >
-            {inactiveValue}+
-          </div>
-        </div>
-      )}
+      {/* Status accent bar */}
+      <div
+        className="w-full h-1.5 rounded-[var(--g-radius-sm)]"
+        style={{ backgroundColor: getActiveColor() }}
+      />
     </div>
   );
 };
