@@ -84,9 +84,13 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
   useEffect(() => {
     if (!isFetchedStats.current) {
+      // A deactivated employee's session can still hold a valid (not-yet-expired) auth
+      // cookie — the backend rejects this endpoint with a 404 in that case, and
+      // apiHandler resolves that as null rather than throwing. Attendance status is a
+      // secondary widget, so a failure here shouldn't block the rest of the card (name,
+      // department, shift, designation) from rendering.
       fetchAttendanceStatus(dispatch).then((response) => {
-        const data = response.result;
-        setEmployeeStatus(data);
+        setEmployeeStatus(response?.result ?? null);
         isFetchedStats.current = true;
       });
     }
@@ -111,8 +115,10 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   const firstName = profileData?.result?.firstName || "Guest";
   const lastName = profileData?.result?.lastName || "";
 
-  // Show loading state if profileData or employeeStatus is not available
-  if (!profileData?.result || !employeeStatus) {
+  // Attendance status is a secondary widget (drives the clock-in/out disabled state) —
+  // its absence shouldn't hold the whole card hostage on a skeleton. Only the profile
+  // data (name, department, shift, designation) is required to render real content.
+  if (!profileData?.result) {
     return (
       <div
         className={`${className} grid grid-cols-7 rounded-[var(--g-radius-md)] border-g-gray-alpha-400 items-center border-[1px] bg-g-background-100 shadow-geist-card animate-pulse`}
@@ -165,7 +171,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
         setIsPunchedIn(false);
         setPunchOutTime(now);
         const updatedStatus = await fetchAttendanceStatus(dispatch);
-        setEmployeeStatus(updatedStatus.result);
+        setEmployeeStatus(updatedStatus?.result ?? null);
         onPunchUpdate?.();
       }
     } else {
