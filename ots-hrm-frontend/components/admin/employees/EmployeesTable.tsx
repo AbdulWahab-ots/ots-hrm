@@ -523,6 +523,7 @@ const EmployeesTable = () => {
             isLoading={isLoading}
             enableSorting={true}
             showBulkDelete={true}
+            onRowClick={handleView}
             meta={{
               toggleRowSelection,
               toggleAllRowsSelection,

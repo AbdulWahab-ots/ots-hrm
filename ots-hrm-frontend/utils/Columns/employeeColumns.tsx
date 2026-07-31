@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { FiTrash2, FiEdit2 } from "react-icons/fi";
-import { Eye, User, UserX } from "lucide-react";
+import { User, UserX } from "lucide-react";
 import { FaArrowUp, FaArrowDown } from "react-icons/fa";
 import CustomCheckbox from "@/components/common/form/CustomCheckbox";
 import { Employee } from "@/utils/types";
@@ -52,13 +52,15 @@ export const employeeColumns = (
           cell: (info: any) => {
             const employee = info.row.original as Employee;
             return (
-              <CustomCheckbox
-                checked={employee.selected || false}
-                onChange={() =>
-                  info.table.options.meta?.toggleRowSelection?.(employee.id)
-                }
-                id={`checkbox-${employee.id}`}
-              />
+              <div onClick={(e) => e.stopPropagation()}>
+                <CustomCheckbox
+                  checked={employee.selected || false}
+                  onChange={() =>
+                    info.table.options.meta?.toggleRowSelection?.(employee.id)
+                  }
+                  id={`checkbox-${employee.id}`}
+                />
+              </div>
             );
           },
           size: 40,
@@ -185,15 +187,6 @@ export const employeeColumns = (
         const alreadyExited = EXIT_STATUSES.includes(employee.status as string);
         return (
           <div className="flex items-center space-x-4">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                info.table.options.meta?.handleView?.(employee);
-              }}
-              className="text-g-gray-700 cursor-pointer hover:text-g-blue-700"
-            >
-              <Eye size={16} />
-            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();

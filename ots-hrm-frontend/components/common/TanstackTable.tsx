@@ -25,6 +25,7 @@ interface TanstackTableProps<T extends { id: string }> {
   enableSorting?: boolean;
   showTdBottomBorder?: boolean;
   showBulkDelete?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
 export const TanstackTable = forwardRef<
@@ -44,6 +45,7 @@ export const TanstackTable = forwardRef<
       enableSorting = false,
       showTdBottomBorder = false,
       showBulkDelete = false,
+      onRowClick,
     },
     ref
   ) => {
@@ -175,7 +177,11 @@ export const TanstackTable = forwardRef<
                 table.getRowModel().rows.map((row, index) => (
                   <tr
                     key={row.id}
-                    className="hover:bg-gray-50"
+                    className={`hover:bg-gray-50 ${onRowClick ? "cursor-pointer" : ""
+                      }`}
+                    onClick={
+                      onRowClick ? () => onRowClick(row.original) : undefined
+                    }
                     style={
                       showTdBottomBorder &&
                         index < table.getRowModel().rows.length - 1
