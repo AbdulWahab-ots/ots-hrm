@@ -1,7 +1,7 @@
 import { inject, injectable } from "tsyringe";
-import { EmployeeRepository, RoleRepository, UserRepository } from "../dal";
+import { EmployeeRepository, RoleRepository, UserRepository, AttendanceRepository, VacationRepository, PayrollRepository } from "../dal";
 import { Employee, Role, User, EmployeeBenefit } from "../entities";
-import { Actions, IEmployeeRequest, IEmployeeResponse, IEmployeeSetupWarning, IEmployeeStatsResponse, ITokenUser } from "../models";
+import { Actions, IEmployeeRequest, IEmployeeResponse, IEmployeeSetupWarning, IEmployeeStatsResponse, ITokenUser, EmployeeStatus } from "../models";
 import { Service } from "./generics/service";
 import { encrypt, generateSetPasswordToken } from "../utility";
 import { Not } from "typeorm";
@@ -9,7 +9,7 @@ import { AppError } from "../utility/app-error";
 import { UserShiftService } from "./user-shift-service";
 import { EmployeeBenefitService } from "./employee-benefit-service";
 import { generateEmployeeCode } from "../utility/employee-code";
-import { sendWelcomeEmail, sendSetPasswordEmail } from "../utility/mail-utility";
+import { sendWelcomeEmail, sendSetPasswordEmail, sendEmploymentStatusUpdateEmail } from "../utility/mail-utility";
 
 @injectable()
 export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmployeeRequest> {
@@ -18,7 +18,10 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         @inject('UserRepository') private readonly userRepository: UserRepository,
         @inject('RoleRepository') private readonly roleRepository: RoleRepository,
         @inject('UserShiftService') private readonly userShiftService: UserShiftService,
-        @inject('EmployeeBenefitService') private readonly employeeBenefitService: EmployeeBenefitService
+        @inject('EmployeeBenefitService') private readonly employeeBenefitService: EmployeeBenefitService,
+        @inject('AttendanceRepository') private readonly attendanceRepository: AttendanceRepository,
+        @inject('VacationRepository') private readonly vacationRepository: VacationRepository,
+        @inject('PayrollRepository') private readonly payrollRepository: PayrollRepository
     ) {
         super(employeeRepository, () => new Employee())
     }
@@ -68,6 +71,117 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         }
 
         return true;
+    }
+
+    // The generic delete() hard-deletes the Employee row only — it never touches the
+    // linked User, so any Attendance/Vacation/Payroll rows (which key off userId, not
+    // employeeId, and mostly carry no FK back to Employee) are silently orphaned. A
+    // report later joining through user.employee then finds employee undefined and
+    // crashes. Block the delete here and point the admin at deactivation instead,
+    // which already correctly sets active=false via onStatusChange (see update()).
+    public async delete(id: string, contextUser: ITokenUser): Promise<void> {
+        const employee = await this.employeeRepository.firstOrDefault({
+            where: { id, companyId: contextUser.companyId },
+        });
+        if (!employee) {
+            throw new AppError("Employee not found.", "404");
+        }
+
+        const [hasAttendance, hasVacation, hasPayroll] = await Promise.all([
+            this.attendanceRepository.firstOrDefault({ where: { userId: employee.userId } }),
+            this.vacationRepository.firstOrDefault({ where: { requestedBy: employee.userId } }),
+            this.payrollRepository.firstOrDefault({ where: { employeeId: employee.id } }),
+        ]);
+
+        if (hasAttendance || hasVacation || hasPayroll) {
+            throw new AppError(
+                "This employee has attendance, leave, or payroll history and can't be deleted. Set their status to Resigned/Terminated instead to deactivate them while preserving their records.",
+                "409"
+            );
+        }
+
+        return super.delete(id, contextUser);
+    }
+
+    // Deactivates an employee who has history (so can't be hard-deleted) instead: sets their
+    // status/departureDate via the same onStatusChange rule update() uses, and — unlike
+    // update() — also flips the linked User row inactive, since that's the field auth-service
+    // actually checks at login. onStatusChange alone only touches Employee.active, which the
+    // login check never reads, so without this an admin "deactivating" someone here previously
+    // left their account fully able to log in.
+    private static readonly RESIGNATION_STATUSES = [EmployeeStatus.RESIGNED, EmployeeStatus.TERMINATED, EmployeeStatus.RETIRED];
+
+    public async resignEmployee(
+        id: string,
+        request: { status: EmployeeStatus; effectiveDate: Date | string },
+        contextUser: ITokenUser
+    ): Promise<IEmployeeResponse> {
+        if (!EmployeeService.RESIGNATION_STATUSES.includes(request.status)) {
+            throw new AppError(
+                `Invalid status. Must be one of: ${EmployeeService.RESIGNATION_STATUSES.join(', ')}`,
+                "400"
+            );
+        }
+
+        const queryRunner = await this.employeeRepository.beginTransaction();
+        try {
+            const existingEmployee = await this.employeeRepository.firstOrDefault({
+                where: { id, companyId: contextUser.companyId },
+                relations: { user: true },
+            });
+
+            if (!existingEmployee || !existingEmployee.user) {
+                throw new AppError("Employee not found.", "404");
+            }
+
+            existingEmployee.onStatusChange(request.status, request.effectiveDate);
+
+            await this.employeeRepository.partialUpdate(
+                existingEmployee.id,
+                {
+                    status: request.status,
+                    active: existingEmployee.active,
+                    departureDate: existingEmployee.departureDate,
+                },
+                contextUser,
+                queryRunner,
+                ['active']
+            );
+
+            await this.userRepository.partialUpdate(
+                existingEmployee.user.id,
+                { active: false },
+                contextUser,
+                queryRunner,
+                ['active']
+            );
+
+            await this.employeeRepository.commitTransaction(queryRunner);
+
+            const effectiveDateStr = new Date(request.effectiveDate).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+            });
+            const emailSent = await sendEmploymentStatusUpdateEmail(existingEmployee.user.email, {
+                name: `${existingEmployee.user.firstName} ${existingEmployee.user.lastName}`,
+                status: request.status,
+                date: effectiveDateStr,
+            });
+            if (!emailSent) {
+                console.error(`Failed to send employment status update email to ${existingEmployee.user.email}`);
+            }
+
+            const refreshedEmployee = await this.employeeRepository.firstOrDefault({
+                where: { id },
+                relations: { user: true, department: true, designation: true, shift: true },
+            });
+            if (!refreshedEmployee) {
+                throw new AppError("Failed to retrieve updated employee.", "500");
+            }
+            return refreshedEmployee.toResponse();
+        } catch (error) {
+            await this.employeeRepository.rollbackTransaction(queryRunner);
+            throw error;
+        }
     }
 
     public async add(entityRequest: IEmployeeRequest, contextUser: ITokenUser): Promise<IEmployeeResponse> {
@@ -273,9 +387,12 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
                 finalEmployeeUpdateData.departureDate = existingEmployee.departureDate;
             }
 
-            // Update employee entity if there are employee-specific fields to update
+            // Update employee entity if there are employee-specific fields to update.
+            // `active` is normally blocked from generic partial updates (mass-assignment
+            // defense), but here it's not request-supplied — onStatusChange computed it from
+            // the status transition above, so it must be allowed through explicitly.
             if (Object.keys(finalEmployeeUpdateData).length > 0) {
-                await this.employeeRepository.partialUpdate(existingEmployee.id, finalEmployeeUpdateData, contextUser, queryRunner);
+                await this.employeeRepository.partialUpdate(existingEmployee.id, finalEmployeeUpdateData, contextUser, queryRunner, ['active']);
             }
 
             // Assign or update shift if shiftId is provided - within the same transaction
@@ -562,9 +679,11 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
                     finalEmployeeUpdateData.active = existingEmployee.active;
                 }
 
-                // Only update if there are fields to update
+                // Only update if there are fields to update. See the corresponding comment
+                // in update() above — `active` is computed by onStatusChange, not
+                // request-supplied, so it must be allowed through the blocklist explicitly.
                 if (Object.keys(finalEmployeeUpdateData).length > 0) {
-                    await this.employeeRepository.partialUpdate(existingEmployee.id, finalEmployeeUpdateData, contextUser, queryRunner);
+                    await this.employeeRepository.partialUpdate(existingEmployee.id, finalEmployeeUpdateData, contextUser, queryRunner, ['active']);
                 }
 
                 employeeEntity = existingEmployee;

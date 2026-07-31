@@ -211,6 +211,22 @@ export const sendBulkEmails = async (emails: string[], subject: string, template
   return results.map(result => result.status === 'fulfilled' ? result.value : false);
 };
 
+// Send employment status update notice when an admin resigns/terminates/retires an employee
+// (see EmployeeService.resignEmployee). Reuses the same header/body styling as the other
+// transactional templates (welcome, notification) for visual consistency.
+export const sendEmploymentStatusUpdateEmail = async (
+  to: string,
+  data: { name: string; status: string; date: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: 'Employment Status Update — OTS HRM',
+    template: 'status-update',
+    data,
+    text: `Dear ${data.name},\n\nYour employment status has been updated to "${data.status}," effective ${data.date}. Accordingly, your access to the OTS HRM system has been deactivated.\n\nIf you have any questions regarding this update, please contact your HR department.\n\nRegards,\nOrange Tree Systems (OTS) HR Team`,
+  });
+};
+
 // Send invite email
 export const sendInviteEmail = async (
   to: string, 

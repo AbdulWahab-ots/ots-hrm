@@ -7,7 +7,7 @@ import { ExtendedRequest } from "../models/inerfaces/extended-Request";
 import { EmployeeService } from "../bl";
 import { authorize, validateCompanyHeader } from "../middlewares/authentication";
 import { payloadValidator, bodyValidator, queryValidator, paramsValidator } from "../middlewares/payload-validator";
-import { uuidParamSchema, createEmployeeSchema, updateEmployeeSchema } from "../models/payload-schemas";
+import { uuidParamSchema, createEmployeeSchema, updateEmployeeSchema, resignEmployeeSchema } from "../models/payload-schemas";
 import { AppResponse } from "../utility";
 
 
@@ -81,6 +81,15 @@ export class EmployeeController extends ControllerBase {
                 path: `:id/send-set-password-email`,
                 middlewares: [paramsValidator(uuidParamSchema)],
                 handler: this.sendSetPasswordEmail as RouteHandlerMethod
+            },
+            {
+                method: 'POST',
+                path: `:id/resign`,
+                middlewares: [
+                    paramsValidator(uuidParamSchema),
+                    bodyValidator(resignEmployeeSchema)
+                ],
+                handler: this.resignEmployee as RouteHandlerMethod
             }
 
         ];
@@ -212,6 +221,23 @@ export class EmployeeController extends ControllerBase {
         if (request.user) {
             await this.employeeService.sendSetPasswordEmail(req.params.id, request.user);
             res.send(AppResponse.success("Set-password email sent successfully"));
+        }
+    }
+
+    private resignEmployee = async (req: FastifyRequest<{Body: {status: string, effectiveDate: string}, Params: {id: string}}>, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            res.send(
+                AppResponse.success(
+                    "Employee status updated successfully",
+                    await this.employeeService.resignEmployee(
+                        req.params.id,
+                        { status: req.body.status as any, effectiveDate: req.body.effectiveDate },
+                        request.user
+                    )
+                )
+            );
         }
     }
 

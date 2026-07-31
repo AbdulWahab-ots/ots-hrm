@@ -1311,6 +1311,26 @@ export const deleteEmployeeAPI = async (
   return true;
 };
 
+// Deactivates an employee who has attendance/leave/payroll history instead of hard-deleting
+// them (which the backend blocks with a 409 for exactly that reason).
+export const resignEmployeeAPI = async (
+  dispatch: AppDispatch,
+  employeeId: string,
+  payload: { status: string; effectiveDate: string }
+): Promise<boolean> => {
+  const response = await apiHandler(
+    dispatch,
+    "post",
+    `/employee/${employeeId}/resign`,
+    {
+      data: payload,
+      successMessage: "Employee status updated successfully",
+      showSuccessToast: true,
+    }
+  );
+  return !!response;
+};
+
 //  Profile upload image 
 export const uploadProfileImageAPI = async (
   dispatch: AppDispatch,

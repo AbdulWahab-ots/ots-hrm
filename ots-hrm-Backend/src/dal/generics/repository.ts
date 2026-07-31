@@ -208,7 +208,7 @@ export class GenericRepository<TEntity extends (CompanyEntityBase | EntityBase) 
         return setSaurceDataResponse<TEntity, TResponse>(entities, totalRecords, fetchRequest?.pagedListRequest?.pageSize, fetchRequest?.pagedListRequest?.pageNo);
     }
 
-    async partialUpdate(id: string, partialEntity: QueryDeepPartialEntity<TEntity>, contextUser?: ITokenUser, queryRunner?: QueryRunner): Promise<TEntity> {
+    async partialUpdate(id: string, partialEntity: QueryDeepPartialEntity<TEntity>, contextUser?: ITokenUser, queryRunner?: QueryRunner, allowOverride: string[] = []): Promise<TEntity> {
         // Verify company ownership if contextUser is provided and this is a company entity.
         // A super admin acting on a company carries that company as contextUser.companyId
         // (set in validateCompanyHeader), so they are verified against the selected company too.
@@ -231,6 +231,11 @@ export class GenericRepository<TEntity extends (CompanyEntityBase | EntityBase) 
         ];
         const sanitizedPartial = { ...(partialEntity as Record<string, unknown>) };
         for (const col of BLOCKED_UPDATE_COLUMNS) {
+            // allowOverride is for values the caller's own business logic computed (e.g.
+            // Employee.onStatusChange deriving `active` from a status transition) — not for
+            // passing untrusted request-body fields through, which is exactly what this
+            // blocklist exists to stop.
+            if (allowOverride.includes(col)) continue;
             delete sanitizedPartial[col];
         }
 

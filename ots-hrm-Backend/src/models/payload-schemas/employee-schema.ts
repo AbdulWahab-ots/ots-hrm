@@ -77,3 +77,19 @@ export const updateEmployeeSchema = z.object(
         ibanNumber: z.string().optional(),
     }
 );
+
+const RESIGNATION_STATUSES = [EmployeeStatus.RESIGNED, EmployeeStatus.TERMINATED, EmployeeStatus.RETIRED];
+
+export const resignEmployeeSchema = z.object(
+    {
+        status: z
+            .string()
+            .refine(
+                (val) => RESIGNATION_STATUSES.includes(val as EmployeeStatus),
+                {
+                    message: `Invalid status. Must be one of: ${RESIGNATION_STATUSES.join(', ')}`,
+                }
+            ),
+        effectiveDate: z.string(),
+    }
+);

@@ -18,12 +18,14 @@ import { AppDispatch, RootState } from "@/store/store";
 import {
   getAllEmployeesAPI,
   deleteEmployeeAPI,
+  resignEmployeeAPI,
   updateEmployeeAPI,
   createEmployeeAPI,
   fetchAllDepartments,
   fetchAllDesignations,
   uploadProfileImageAPI,
 } from "@/services/adminServices";
+import ResignEmployeeModal from "./ResignEmployeeModal";
 import {
   Employee,
   GetEmployeesPayload,
@@ -43,6 +45,9 @@ const EmployeesTable = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isBulkDelete, setIsBulkDelete] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
+  const [isResignModalOpen, setIsResignModalOpen] = useState(false);
+  const [employeeToResign, setEmployeeToResign] = useState<Employee | null>(null);
+  const [isResignLoading, setIsResignLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
@@ -180,6 +185,34 @@ const EmployeesTable = () => {
       setIsBulkDelete(false);
       setSelectedRows([]);
       setLocalIsLoading(false);
+      dispatch(setIsLoading(false));
+    }
+  };
+
+  const handleResign = (employee: Employee) => {
+    setEmployeeToResign(employee);
+    setIsResignModalOpen(true);
+  };
+
+  const handleConfirmResign = async (status: string, effectiveDate: string) => {
+    if (!employeeToResign) return;
+    try {
+      setIsResignLoading(true);
+      dispatch(setIsLoading(true));
+      const success = await resignEmployeeAPI(dispatch, employeeToResign.id, {
+        status,
+        effectiveDate,
+      });
+      if (success) {
+        setIsResignModalOpen(false);
+        setEmployeeToResign(null);
+        const filters = buildFilters();
+        fetchEmployees(currentPage, filters);
+      }
+    } catch (error) {
+      console.error("An error occurred while resigning the employee:", error);
+    } finally {
+      setIsResignLoading(false);
       dispatch(setIsLoading(false));
     }
   };
@@ -404,7 +437,8 @@ const EmployeesTable = () => {
       isDeleteModalOpen ||
       isModalOpen ||
       isDateModalOpen ||
-      isSuccessModalOpen
+      isSuccessModalOpen ||
+      isResignModalOpen
     ) {
       document.body.style.overflow = "hidden";
     } else {
@@ -413,7 +447,7 @@ const EmployeesTable = () => {
     return () => {
       document.body.style.overflow = "auto";
     };
-  }, [isDeleteModalOpen, isModalOpen, isDateModalOpen, isSuccessModalOpen]);
+  }, [isDeleteModalOpen, isModalOpen, isDateModalOpen, isSuccessModalOpen, isResignModalOpen]);
 
   return (
     <>
@@ -498,6 +532,7 @@ const EmployeesTable = () => {
               setEmployeeToDelete,
               handleEdit,
               handleView,
+              handleResign,
               router,
               onSortChange: handleSortChange,
             }}
@@ -530,6 +565,16 @@ const EmployeesTable = () => {
           onConfirm={handleDelete}
           isLoading={isLoading}
           TextMessage="Employee will be deleted, and unfortunately, you won't be able to get it back."
+        />
+
+        <ResignEmployeeModal
+          isOpen={isResignModalOpen}
+          onCancel={() => {
+            setIsResignModalOpen(false);
+            setEmployeeToResign(null);
+          }}
+          onConfirm={handleConfirmResign}
+          isLoading={isResignLoading}
         />
 
         <CustomModal

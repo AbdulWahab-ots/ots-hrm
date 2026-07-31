@@ -124,7 +124,10 @@ const AttendanceTable = () => {
   const mapToAttendance = useCallback(
     (item: any): Attendance => {
       const user = item.user;
-      const employee = user.employee;
+      // A hard-deleted employee leaves attendance rows pointing at a user with no
+      // employee profile anymore (they key off userId, not employeeId, and mostly
+      // carry no FK back to Employee) — fall back instead of crashing the whole page.
+      const employee = user?.employee ?? { designationId: null, departmentId: null };
       let status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" = "Absent";
       if (item.status === "PRESENT") {
         status = "PRESENT";
@@ -151,12 +154,14 @@ const AttendanceTable = () => {
         userId: item.userId,
         selected: false,
         employee: {
-          name: `${user.firstName} ${user.lastName || ""}`,
+          name: user
+            ? `${user.firstName} ${user.lastName || ""}`
+            : "Unknown Employee",
           designation:
             designations?.find(
               (des: { id: string }) => des.id === employee.designationId
             )?.title || "",
-          profileUrl: user.pictureUrl || null,
+          profileUrl: user?.pictureUrl || null,
         },
         department: {
           id: employee.departmentId,

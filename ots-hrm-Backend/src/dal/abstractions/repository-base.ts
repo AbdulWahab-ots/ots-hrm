@@ -58,7 +58,7 @@ export interface IRepositoryBase<TEntity extends (CompanyEntityBase | EntityBase
     commitTransaction(queryRunner: QueryRunner): Promise<void>;
 
     // Modification Methods
-    partialUpdate(id: string, partialEntity: QueryDeepPartialEntity<TEntity>, contextUser?: ITokenUser, queryRunner?: QueryRunner): Promise<TEntity>;
+    partialUpdate(id: string, partialEntity: QueryDeepPartialEntity<TEntity>, contextUser?: ITokenUser, queryRunner?: QueryRunner, allowOverride?: string[]): Promise<TEntity>;
     invokeDbOperations(entity: TEntity, action: Actions, queryRunner?: QueryRunner): Promise<TEntity>;
     invokeDbOperationsWithResponse(entity: TEntity, action: Actions, queryRunner?: QueryRunner): Promise<TResponse>;
     invokeDbOperationsRange(entities: TEntity[], action: Actions, queryRunner?: QueryRunner): Promise<TEntity[]>;

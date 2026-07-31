@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { FiTrash2, FiEdit2 } from "react-icons/fi";
-import { Eye } from "lucide-react";
+import { Eye, User, UserX } from "lucide-react";
 import { FaArrowUp, FaArrowDown } from "react-icons/fa";
 import CustomCheckbox from "@/components/common/form/CustomCheckbox";
 import { Employee } from "@/utils/types";
@@ -16,6 +16,7 @@ interface CustomTableMeta extends TableMeta<Employee & { selected?: boolean }> {
   setBenefitToDelete: (id: string) => void;
   handleEdit: (benefit: Employee) => void;
   handleView: (employee: Employee) => void;
+  handleResign: (employee: Employee) => void;
   router: ReturnType<typeof useRouter>;
   onSortChange: (columnId: string, isSorted: false | "asc" | "desc") => void;
 }
@@ -97,11 +98,18 @@ export const employeeColumns = (
         const employee = info.row.original as Employee;
         return (
           <div className="flex items-center">
-            <img
-              src={employee.user.pictureUrl || "https://placehold.co/400"}
-              alt="Profile"
-              className="w-8 h-8 rounded-full mr-2"
-            />
+            <div className="w-8 h-8 rounded-full mr-2 bg-g-gray-100 border-[1px] border-g-gray-alpha-400 flex items-center justify-center overflow-hidden shrink-0">
+              {employee.user.pictureUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={employee.user.pictureUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={14} className="text-g-gray-700" />
+              )}
+            </div>
             <div>
               <div className="font-medium text-g-gray-1000 text-nowrap">
                 {employee.user.userName}
@@ -149,10 +157,16 @@ export const employeeColumns = (
       header: "Status",
       cell: (info: any) => {
         const status = info.getValue();
+        // Exit statuses (no longer active) get a visually distinct color from the
+        // merely-provisional ones — otherwise a resigned/terminated employee looks
+        // identical to one on probation at a glance.
+        const EXIT_STATUSES = ["RESIGNED", "TERMINATED", "RETIRED"];
         const colorClass =
           status === "PERMANENT"
             ? "text-g-blue-800 bg-g-blue-100"
-            : "text-g-amber-900 bg-g-amber-100";
+            : EXIT_STATUSES.includes(status)
+              ? "text-g-red-800 bg-g-red-100"
+              : "text-g-amber-900 bg-g-amber-100";
         return (
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}
@@ -167,6 +181,8 @@ export const employeeColumns = (
       header: "",
       cell: (info: any) => {
         const employee = info.row.original as Employee;
+        const EXIT_STATUSES = ["RESIGNED", "TERMINATED", "RETIRED"];
+        const alreadyExited = EXIT_STATUSES.includes(employee.status as string);
         return (
           <div className="flex items-center space-x-4">
             <button
@@ -186,6 +202,21 @@ export const employeeColumns = (
               className="text-g-gray-700 cursor-pointer hover:text-g-green-800"
             >
               <FiEdit2 size={16} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (alreadyExited) return;
+                info.table.options.meta?.handleResign?.(employee);
+              }}
+              disabled={alreadyExited}
+              title={alreadyExited ? "Employee already deactivated" : "Resign / Deactivate"}
+              className={`cursor-pointer ${alreadyExited
+                ? "text-g-gray-400 cursor-not-allowed"
+                : "text-g-gray-700 hover:text-g-amber-800"
+                }`}
+            >
+              <UserX size={16} />
             </button>
             <button
               onClick={(e) => {
