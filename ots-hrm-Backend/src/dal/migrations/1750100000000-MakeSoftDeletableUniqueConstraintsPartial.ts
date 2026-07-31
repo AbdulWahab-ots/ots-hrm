@@ -49,7 +49,7 @@ export class MakeSoftDeletableUniqueConstraintsPartial1750100000000 implements M
                 WHERE con.contype = 'u'
                   AND rel.relname = $1
                   AND (
-                    SELECT array_agg(attname ORDER BY ord)
+                    SELECT array_agg(attname::text ORDER BY ord)
                     FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
                     JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = k.attnum
                   ) = $2::text[]

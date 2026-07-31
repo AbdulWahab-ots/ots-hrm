@@ -12,6 +12,12 @@ import {
 import { seedTestData } from "./test-data-seeder";
 
 const runSeeder = async () => {
+  // This injects fake companies/employees — refuse to run it against production data,
+  // same fail-closed pattern as the other seeders (super-admin/default-company).
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("seed:test must not be run with NODE_ENV=production.");
+  }
+
   const dbConfig = getTypeOrmConfig();
 
   const dataSource = new DataSource({
