@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { format } from "date-fns";
 import { Formik, Form, FormikHelpers } from "formik";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
@@ -592,6 +593,8 @@ const CreateEmployee = ({
                   <Button
                     type="submit"
                     variant="filled"
+                    fullWidth={false}
+                    className="px-8"
                     label={
                       step < 3
                         ? "Next"
@@ -612,11 +615,11 @@ const CreateEmployee = ({
                   onClose={() => setIsDateModalOpen(false)}
                   incrementDates={true}
                   onSave={(range) => {
+                    // toISOString() rolls local midnight back a day for any timezone
+                    // ahead of UTC (e.g. PKT) — format() reads the local calendar date.
                     setFieldValue(
                       "joiningDate",
-                      range.startDate
-                        ? range.startDate.toISOString().split("T")[0]
-                        : ""
+                      range.startDate ? format(range.startDate, "yyyy-MM-dd") : ""
                     );
                   }}
                   initialRange={{

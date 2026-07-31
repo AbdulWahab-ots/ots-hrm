@@ -79,14 +79,14 @@ export const employeeColumns = (
               ) : column.getIsSorted() === "desc" ? (
                 <FaArrowDown size={12} />
               ) : (
-                <span className="text-gray-300">↕</span>
+                <span className="text-g-gray-400">↕</span>
               )}
             </span>
           )}
         </div>
       ),
       cell: (info: any) => (
-        <div className="text-gray-500 text-nowrap">{info.getValue()}</div>
+        <div className="text-g-gray-700 text-nowrap">{info.getValue()}</div>
       ),
       enableSorting: true,
     },
@@ -103,10 +103,10 @@ export const employeeColumns = (
               className="w-8 h-8 rounded-full mr-2"
             />
             <div>
-              <div className="font-medium text-gray-900 text-nowrap">
+              <div className="font-medium text-g-gray-1000 text-nowrap">
                 {employee.user.userName}
               </div>
-              <div className="text-sm text-gray-500 text-nowrap">
+              <div className="text-sm text-g-gray-700 text-nowrap">
                 {employee.designation?.title || ""}
               </div>
             </div>
@@ -117,12 +117,12 @@ export const employeeColumns = (
     {
       accessorKey: "user.email",
       header: "Email Address",
-      cell: (info: any) => <div className="text-gray-500">{info.getValue()}</div>,
+      cell: (info: any) => <div className="text-g-gray-700">{info.getValue()}</div>,
     },
     {
       accessorKey: "phoneNumber",
       header: "Phone",
-      cell: (info: any) => <div className="text-gray-500">{info.getValue()}</div>,
+      cell: (info: any) => <div className="text-g-gray-700">{info.getValue()}</div>,
     },
     {
       accessorKey: "department.name",
@@ -140,7 +140,7 @@ export const employeeColumns = (
       header: "Joining Date",
       cell: (info: any) => (
         <div>
-          <span className="text-gray-500 text-nowrap">{info.getValue()}</span>
+          <span className="text-g-gray-700 text-nowrap">{info.getValue()}</span>
         </div>
       ),
     },
@@ -174,7 +174,7 @@ export const employeeColumns = (
                 e.stopPropagation();
                 info.table.options.meta?.handleView?.(employee);
               }}
-              className="text-gray-500 cursor-pointer hover:text-blue-600"
+              className="text-g-gray-700 cursor-pointer hover:text-g-blue-700"
             >
               <Eye size={16} />
             </button>
@@ -183,7 +183,7 @@ export const employeeColumns = (
                 e.stopPropagation();
                 info.table.options.meta?.handleEdit?.(employee);
               }}
-              className="text-gray-500 cursor-pointer hover:text-green-600"
+              className="text-g-gray-700 cursor-pointer hover:text-g-green-800"
             >
               <FiEdit2 size={16} />
             </button>
@@ -194,7 +194,7 @@ export const employeeColumns = (
                 info.table.options.meta?.setIsBulkDelete?.(false);
                 info.table.options.meta?.setIsDeleteModalOpen?.(true);
               }}
-              className="text-gray-500 cursor-pointer hover:text-red-600"
+              className="text-g-gray-700 cursor-pointer hover:text-g-red-700"
             >
               <FiTrash2 size={16} />
             </button>

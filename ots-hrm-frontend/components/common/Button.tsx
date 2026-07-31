@@ -12,6 +12,10 @@ type ButtonProps = {
   disabled?: boolean;
   variant?: "filled" | "outline" | "secondary";
   isLoading?: boolean;
+  // Defaults to true to preserve existing full-width buttons everywhere. Set to false
+  // for buttons that sit in a shrink-to-fit container (e.g. a modal/form action bar) —
+  // width:100% there resolves against a circularly-sized ancestor and collapses the button.
+  fullWidth?: boolean;
 };
 
 const Button = ({
@@ -25,10 +29,10 @@ const Button = ({
   disabled = false,
   variant = "filled",
   isLoading = false,
+  fullWidth = true,
 }: ButtonProps) => {
   // Base styles
-  const baseStyles =
-    "flex w-full text-nowrap items-center justify-center gap-2 text-button-14 lg:text-button-16 py-3 px-4 border rounded-[var(--g-radius-sm)] transition-all duration-150";
+  const baseStyles = `flex ${fullWidth ? "w-full" : "w-auto"} text-nowrap items-center justify-center gap-2 text-button-14 lg:text-button-16 py-3 px-4 border rounded-[var(--g-radius-sm)] transition-all duration-150`;
 
   // Filled variant styles
   const filledStyles = `

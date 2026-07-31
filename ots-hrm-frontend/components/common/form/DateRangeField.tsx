@@ -8,7 +8,6 @@ import {
   startOfToday,
   subDays,
   startOfMonth,
-  endOfMonth,
   subMonths,
 } from "date-fns";
 import { Check } from "lucide-react";
@@ -97,13 +96,15 @@ export default function DateRangeField({
         end = new Date(today);
         break;
       case "This Month":
+        // 1st of the current month through today — not the full calendar month, which
+        // would include future dates still to come this month.
         start = startOfMonth(today);
-        end = endOfMonth(today);
+        end = new Date(today);
         break;
       case "Last Month":
-        const lastMonth = subMonths(today, 1);
-        start = startOfMonth(lastMonth);
-        end = endOfMonth(lastMonth);
+        // Start of last month through today (not just last month's own end date).
+        start = startOfMonth(subMonths(today, 1));
+        end = new Date(today);
         break;
       case "Custom Range":
         if (onCustomSelect) {

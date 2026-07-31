@@ -93,6 +93,8 @@ const ChangePassword = forwardRef<
               <Button
                 type="submit"
                 variant="filled"
+                fullWidth={false}
+                className="px-8"
                 label="Save"
                 isLoading={isSubmitting}
                 disabled={!isValid}

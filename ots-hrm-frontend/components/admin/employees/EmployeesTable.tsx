@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ArrowUpToLine, Plus } from "lucide-react";
 import DeleteConfirmationModal from "@/components/common/DeleteConfirmation";
@@ -200,9 +201,12 @@ const EmployeesTable = () => {
         field: "joiningDate",
         operator: 1,
         matchMode: 10,
+        // toISOString() converts through UTC first, which silently rolls the date back
+        // by a day for any timezone ahead of UTC (e.g. PKT) — format() reads the local
+        // calendar date directly, so "This Month" etc. match the date actually selected.
         rangeValues: {
-          start: selectedRange.startDate.toISOString().split("T")[0],
-          end: selectedRange.endDate.toISOString().split("T")[0],
+          start: format(selectedRange.startDate, "yyyy-MM-dd"),
+          end: format(selectedRange.endDate, "yyyy-MM-dd"),
         },
       });
     }

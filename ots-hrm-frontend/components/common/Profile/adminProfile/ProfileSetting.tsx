@@ -138,6 +138,8 @@ const EditProfile = forwardRef<BasicInfoFormHandle, EditProfileProps>(
               <FormActionBar onCancel={onBack} cancelLabel="Back">
                 <Button
                   variant="filled"
+                  fullWidth={false}
+                  className="px-8"
                   label="Save"
                   isLoading={isSubmitting}
                   disabled={!isValid}

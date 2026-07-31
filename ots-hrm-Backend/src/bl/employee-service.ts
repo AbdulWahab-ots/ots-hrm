@@ -411,10 +411,12 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         let totalEmployees = employees.data.length;
         let activeEmployees = employees.data.filter(emp => emp.active === true).length;
         let inactiveEmployees = employees.data.filter(emp => emp.active === false).length;
-        // last 30 days new joinings
+        // "New Hires" tracks when the employee record was added to the system, not their
+        // (often backdated) joiningDate — a joiningDate from months/years ago shouldn't
+        // count as a new hire just because it was entered today.
         let newJoinings = employees.data.filter(emp =>
-            emp.joiningDate &&
-            new Date(emp.joiningDate) >= new Date(new Date().setDate(new Date().getDate() - 30))
+            emp.createdAt &&
+            new Date(emp.createdAt) >= new Date(new Date().setDate(new Date().getDate() - 30))
         ).length;
 
         return {
