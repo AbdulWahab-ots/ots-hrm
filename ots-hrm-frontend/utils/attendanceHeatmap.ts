@@ -12,7 +12,7 @@ export interface HeatRecord {
   notes?: string | null;
 }
 
-export type HeatKind = "none" | "present" | "absent" | "off";
+export type HeatKind = "none" | "present" | "absent" | "off" | "pending";
 
 export interface DayInfo {
   key: string; // YYYY-MM-DD
@@ -58,7 +58,12 @@ const startOfWeekSunday = (d: Date) => addDays(d, -d.getDay());
  *
  *   no record            -> level 0, kind "none"
  *   leave / holiday / off -> level 0, kind "off"      (not a working day)
- *   absent (working, no check-in) -> level 0, kind "absent" (danger outline)
+ *   not yet resolved (status DEFAULT, no check-in) -> level 0, kind "pending"
+ *     - e.g. today's row before check-in, or an overnight shift's "today" row
+ *       while yesterday's shift is still open. Only the absent-marking cron's
+ *       actual ABSENT status counts as a confirmed absence (see below) - a
+ *       DEFAULT row is not yet a fact and must not be flagged as one.
+ *   absent (status ABSENT) -> level 0, kind "absent" (danger outline)
  *   present, half day     -> level 1
  *   present, < 3h         -> level 1
  *   present, 3–6h         -> level 2
@@ -90,8 +95,13 @@ export function attendanceLevel(record?: HeatRecord): {
     return { level: 4, kind: "present" };
   }
 
-  // A working day that has a record but no check-in => absent.
-  return { level: 0, kind: "absent" };
+  // A confirmed absence - the cron actually marked this row ABSENT.
+  if (s === "ABSENT") return { level: 0, kind: "absent" };
+
+  // Anything else with no check-in (DEFAULT and friends) is not yet resolved -
+  // e.g. today before check-in, or an overnight shift's "today" row while
+  // yesterday's shift is still open. Don't call that "absent" until the cron does.
+  return { level: 0, kind: "pending" };
 }
 
 /**

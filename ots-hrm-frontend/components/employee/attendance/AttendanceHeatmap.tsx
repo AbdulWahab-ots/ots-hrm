@@ -51,6 +51,8 @@ const statusText = (day: DayInfo): string => {
       return "Absent";
     case "off":
       return "Day off / Holiday";
+    case "pending":
+      return "Pending";
     default:
       return day.future ? "Upcoming" : "No record";
   }
