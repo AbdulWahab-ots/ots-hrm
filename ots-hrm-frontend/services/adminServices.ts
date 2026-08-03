@@ -1416,6 +1416,18 @@ export const refreshEmployeeAttendanceAPI = async (
   });
 };
 
+// Admin: sync every active employee in the company from the biometric device for one
+// date (default today). Can take a while for a large company (one request per
+// employee, server-side) — no client-side timeout is set on this call.
+export const syncAllEmployeesAttendanceAPI = async (
+  dispatch: AppDispatch,
+  date?: string
+): Promise<any> => {
+  return apiHandler(dispatch, "post", "/attendance/biometric-sync-all", {
+    data: { ...(date ? { date } : {}) },
+  });
+};
+
 
 export const fetchAllRequests = async (
   dispatch: AppDispatch,

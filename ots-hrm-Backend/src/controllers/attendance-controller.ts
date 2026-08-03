@@ -2,14 +2,14 @@ import { inject, injectable } from "tsyringe";
 import { FastifyReply, FastifyRequest, preHandlerHookHandler, RouteHandlerMethod } from "fastify";
 import { ControllerBase } from "./generics/controller-base";
 import { CommonRoutes } from "../constants/commonRoutes";
-import { IFetchRequest, IFilter, IAttendanceRequest, IAttendanceResponse, IAttendanceStatusResponse, IGetSingleRecordFilter, ICheckOutRequest, ICheckInRequest, IStatusRequest, IStartBreakRequest, IEndBreakRequest, IBiometricSyncRequest } from "../models";
+import { IFetchRequest, IFilter, IAttendanceRequest, IAttendanceResponse, IAttendanceStatusResponse, IGetSingleRecordFilter, ICheckOutRequest, ICheckInRequest, IStatusRequest, IStartBreakRequest, IEndBreakRequest, IBiometricSyncRequest, IBiometricBulkSyncRequest } from "../models";
 import { ExtendedRequest } from "../models/inerfaces/extended-Request";
 import { AttendanceService } from "../bl";
 import { AttendanceBreakService } from "../bl/attendance-break-service";
 import { authorize, validateCompanyHeader } from "../middlewares/authentication";
 import { requireAdminAccess } from "../middlewares/permissions";
 import { payloadValidator, bodyValidator, queryValidator, paramsValidator } from "../middlewares/payload-validator";
-import { uuidParamSchema, checkInSchema, checkOutSchema, statusSchema, startBreakSchema, endBreakSchema, biometricSyncSchema } from "../models/payload-schemas";
+import { uuidParamSchema, checkInSchema, checkOutSchema, statusSchema, startBreakSchema, endBreakSchema, biometricSyncSchema, biometricBulkSyncSchema } from "../models/payload-schemas";
 import { AppResponse } from "../utility";
 
 
@@ -90,6 +90,12 @@ export class AttendanceController extends ControllerBase {
                 path: 'biometric-sync',
                 middlewares: [bodyValidator(biometricSyncSchema)],
                 handler: this.biometricSync as RouteHandlerMethod
+            },
+            {
+                method: 'POST',
+                path: 'biometric-sync-all',
+                middlewares: [requireAdminAccess(), bodyValidator(biometricBulkSyncSchema)],
+                handler: this.biometricSyncAll as RouteHandlerMethod
             }
         ];
 
@@ -134,6 +140,21 @@ export class AttendanceController extends ControllerBase {
                 AppResponse.success(
                     "Attendance refreshed successfully",
                     await this.attendanceService.syncFromBiometricDevice(request.user, req.body ?? {})
+                )
+            );
+        }
+    }
+
+    // Admin-only: sync every active employee in the company from the biometric device
+    // for one date (default today). Each employee is attempted independently.
+    private biometricSyncAll = async (req: FastifyRequest<{Body?: IBiometricBulkSyncRequest}>, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            res.send(
+                AppResponse.success(
+                    "Attendance sync completed",
+                    await this.attendanceService.syncAllEmployeesFromBiometricDevice(request.user, req.body ?? {})
                 )
             );
         }

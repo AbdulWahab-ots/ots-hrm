@@ -41,3 +41,8 @@ export const biometricSyncSchema = z.object({
     employeeId: z.string().uuid("employeeId must be a valid UUID").optional(),
     date: dateString.optional(),
 });
+
+// Admin-only bulk sync schema — date omitted defaults to today.
+export const biometricBulkSyncSchema = z.object({
+    date: dateString.optional(),
+});

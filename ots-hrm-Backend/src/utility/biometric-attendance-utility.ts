@@ -1,6 +1,13 @@
 import axios from "axios";
 import { AppError } from "./app-error";
 
+// A distinguishable AppError.message marker for "the device has no employee matching
+// this name" (its API responds 404 with a message like "No employee found matching
+// 'X'") — as opposed to any other failure (auth, network, timeout). Callers check for
+// this exact message to show a friendly "not enrolled yet" state instead of a generic
+// connectivity error.
+export const BIOMETRIC_EMPLOYEE_NOT_ENROLLED = "BIOMETRIC_EMPLOYEE_NOT_ENROLLED";
+
 export interface IBiometricAttendanceRecord {
     check_in: string;  // e.g. "05:39:13 PM", or absent if no check-in
     check_out: string; // e.g. "04:22:16 AM", or "N/A" if not yet checked out
@@ -90,6 +97,13 @@ export async function fetchBiometricAttendance(
                     url: `${normalizedBase}/api/attendance`,
                 }
             );
+
+            // The device API's own "not found" response — the employee genuinely isn't
+            // enrolled there, which is a normal, expected state, not a connectivity
+            // failure. Callers should show a friendly message, not the generic one below.
+            if (error.response?.status === 404) {
+                throw new AppError(BIOMETRIC_EMPLOYEE_NOT_ENROLLED, "404");
+            }
         } else {
             console.error("[biometric-attendance] unexpected error:", error);
         }

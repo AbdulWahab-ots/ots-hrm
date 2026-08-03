@@ -16,10 +16,12 @@ import {
   fetchAllShifts,
   fetchAllAttendance,
   refreshEmployeeAttendanceAPI,
+  syncAllEmployeesAttendanceAPI,
   getAllEmployeesAPI,
 } from "@/services/adminServices";
 import RefreshAttendanceModal from "@/components/common/RefreshAttendanceModal";
 import EmployeePickerModal, { EmployeePickerOption } from "@/components/common/EmployeePickerModal";
+import BulkSyncResultModal from "@/components/common/BulkSyncResultModal";
 import { AdminattendanceColumns } from "@/utils/Columns/AdminattendanceColumns";
 import { GetAttendancePayload, Attendance, Department } from "@/utils/types";
 import { setIsLoading } from "@/store/features/global/globalSlice";
@@ -33,6 +35,7 @@ const AttendanceTable = () => {
   const [isEmployeePickerOpen, setIsEmployeePickerOpen] = useState(false);
   const [pickerEmployees, setPickerEmployees] = useState<EmployeePickerOption[]>([]);
   const [isPickerLoading, setIsPickerLoading] = useState(false);
+  const [isBulkSyncOpen, setIsBulkSyncOpen] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedShift, setSelectedShift] = useState("");
@@ -468,6 +471,11 @@ const AttendanceTable = () => {
               variant="outline"
               onClick={handleOpenEmployeePicker}
             />
+            <Button
+              label="Sync All Employees"
+              variant="outline"
+              onClick={() => setIsBulkSyncOpen(true)}
+            />
             {/* <CustomDropdown
               id="department-filter"
               name="department"
@@ -560,12 +568,13 @@ const AttendanceTable = () => {
           fetchAttendance(currentPage, filters);
         }}
         employeeLabel={refreshTarget?.employeeName}
-        onFetch={async () => {
+        initialDate={refreshTarget?.date}
+        onFetch={async (date) => {
           if (!refreshTarget) return null;
           const response = await refreshEmployeeAttendanceAPI(
             dispatch,
             refreshTarget.employeeId,
-            refreshTarget.date
+            date
           );
           return response?.result ?? null;
         }}
@@ -577,6 +586,19 @@ const AttendanceTable = () => {
         employees={pickerEmployees}
         isLoading={isPickerLoading}
         onSelect={handlePickEmployee}
+      />
+
+      <BulkSyncResultModal
+        isOpen={isBulkSyncOpen}
+        onClose={() => {
+          setIsBulkSyncOpen(false);
+          const filters = buildFilters();
+          fetchAttendance(currentPage, filters);
+        }}
+        onRun={async (date) => {
+          const response = await syncAllEmployeesAttendanceAPI(dispatch, date);
+          return response?.result ?? null;
+        }}
       />
     </>
   );

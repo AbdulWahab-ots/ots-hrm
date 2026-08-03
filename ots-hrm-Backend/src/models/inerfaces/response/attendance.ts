@@ -50,7 +50,7 @@ export interface IBreakResponse {
     user?: IUserResponse
 }
 
-export type BiometricAttendanceStatus = 'OVERTIME' | 'UNDERTIME' | 'ON_TIME' | 'IN_PROGRESS' | 'NO_RECORD';
+export type BiometricAttendanceStatus = 'OVERTIME' | 'UNDERTIME' | 'ON_TIME' | 'IN_PROGRESS' | 'NO_RECORD' | 'NOT_ENROLLED';
 
 export interface IBiometricSyncResponse {
     employeeId: string;
@@ -68,6 +68,27 @@ export interface IBiometricSyncResponse {
     // Non-blocking: the device's employee_id didn't match what we had on file for this
     // employee (name-matching may have hit a different person). Admin should verify.
     zkDeviceIdWarning?: string;
+}
+
+// One employee's outcome within a company-wide bulk sync. `failed` is reserved for
+// actual unexpected errors (auth/network/etc.) — a device that simply has no record
+// for this employee (NOT_ENROLLED / NO_RECORD) is not a failure, it's a normal result.
+export interface IBiometricBulkSyncEmployeeResult {
+    employeeId: string;
+    employeeName: string;
+    outcome: 'synced' | 'no_record' | 'not_enrolled' | 'failed';
+    message: string;
+    sync?: IBiometricSyncResponse;
+}
+
+export interface IBiometricBulkSyncResponse {
+    date: string;
+    totalEmployees: number;
+    syncedCount: number;
+    noRecordCount: number;
+    notEnrolledCount: number;
+    failedCount: number;
+    results: IBiometricBulkSyncEmployeeResult[];
 }
 
 export interface IAttendanceStatsResponse {

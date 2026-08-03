@@ -725,8 +725,8 @@ const EmployeeAttendance: React.FC = () => {
           refetchAttendanceData();
           setRefreshToken((t) => t + 1);
         }}
-        onFetch={async () => {
-          const response = await refreshAttendanceAPI(dispatch);
+        onFetch={async (date) => {
+          const response = await refreshAttendanceAPI(dispatch, date);
           return response?.result ?? null;
         }}
       />

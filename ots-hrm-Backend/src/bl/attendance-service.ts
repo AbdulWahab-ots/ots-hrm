@@ -4,7 +4,7 @@ import { inject, injectable } from "tsyringe";
 import { AttendanceRepository, EmployeeRepository, AttendanceSummaryRepository, VacationRepository, PublicHolidayRepository } from "../dal";
 import { IsNull, In, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm";
 import { Attendance, AttendanceSummary } from "../entities";
-import { Actions, AttendanceStatus, FilterMatchModes, FilterOperators, IAttendanceRequest, IAttendanceResponse, ICheckInRequest, ICheckOutRequest, IDataSourceResponse, IFetchRequest, IStatusRequest, ITokenUser, IAttendanceStatsResponse, EmployeeStatus, PresentStatus, DayName, IAttendanceStatusResponse, RequestType, VacationStatus, NotificationType, IBiometricSyncRequest, IBiometricSyncResponse, BiometricAttendanceStatus } from "../models";
+import { Actions, AttendanceStatus, FilterMatchModes, FilterOperators, IAttendanceRequest, IAttendanceResponse, ICheckInRequest, ICheckOutRequest, IDataSourceResponse, IFetchRequest, IStatusRequest, ITokenUser, IAttendanceStatsResponse, EmployeeStatus, PresentStatus, DayName, IAttendanceStatusResponse, RequestType, VacationStatus, NotificationType, IBiometricSyncRequest, IBiometricSyncResponse, BiometricAttendanceStatus, IBiometricBulkSyncRequest, IBiometricBulkSyncResponse, IBiometricBulkSyncEmployeeResult } from "../models";
 import { Service } from "./generics/service";
 import { AppError } from "../utility/app-error";
 import { WorkingDaysService } from "./working-days-service";
@@ -16,6 +16,7 @@ import {
     diffMinutesAcrossMidnight,
     formatMinutesAsHoursAndMinutes,
     sanitizeEmployeeNameForBiometricApi,
+    BIOMETRIC_EMPLOYEE_NOT_ENROLLED,
 } from "../utility/biometric-attendance-utility";
 
 // The company's official shift is fixed at 8.5 hours (5:30 PM – 2:00 AM) for the
@@ -571,18 +572,107 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         request: IBiometricSyncRequest
     ): Promise<IBiometricSyncResponse> {
         const employee = await this.resolveEmployeeForBiometricSync(contextUser, request.employeeId);
+        return this.performBiometricSync(employee, request.date, contextUser);
+    }
 
+    // Admin-only: syncs every active employee in the company for one date (default:
+    // today). Each employee is attempted independently — one employee's failure (not
+    // enrolled on the device, a transient error, whatever) never stops the rest of the
+    // batch. Sequential on purpose: the external API is a single ngrok tunnel of unknown
+    // capacity, and hammering it concurrently for a whole company risks rate-limiting or
+    // timing out every request instead of just the flaky ones.
+    public async syncAllEmployeesFromBiometricDevice(
+        contextUser: ITokenUser,
+        request: IBiometricBulkSyncRequest
+    ): Promise<IBiometricBulkSyncResponse> {
+        if (!hasAdminAccess(contextUser)) {
+            throw new AppError('Forbidden. Admin access required to sync all employees\' attendance.', '403');
+        }
+
+        const employees = await this.employeeRepository.where({
+            where: { companyId: contextUser.companyId, active: true },
+            relations: { user: true },
+        });
+
+        const resolvedDate = request.date || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const results: IBiometricBulkSyncEmployeeResult[] = [];
+
+        for (const employee of employees) {
+            if (!employee.user) continue;
+            const employeeName = sanitizeEmployeeNameForBiometricApi(
+                `${employee.user.firstName} ${employee.user.lastName || ''}`
+            );
+
+            try {
+                const sync = await this.performBiometricSync(employee, resolvedDate, contextUser);
+                results.push({
+                    employeeId: employee.id,
+                    employeeName,
+                    outcome: sync.attendanceStatus === 'NOT_ENROLLED'
+                        ? 'not_enrolled'
+                        : sync.attendanceStatus === 'NO_RECORD'
+                            ? 'no_record'
+                            : 'synced',
+                    message: sync.statusMessage,
+                    sync,
+                });
+            } catch (error) {
+                results.push({
+                    employeeId: employee.id,
+                    employeeName,
+                    outcome: 'failed',
+                    message: error instanceof AppError ? error.message : 'Unexpected error while syncing this employee.',
+                });
+            }
+        }
+
+        return {
+            date: resolvedDate,
+            totalEmployees: results.length,
+            syncedCount: results.filter(r => r.outcome === 'synced').length,
+            noRecordCount: results.filter(r => r.outcome === 'no_record').length,
+            notEnrolledCount: results.filter(r => r.outcome === 'not_enrolled').length,
+            failedCount: results.filter(r => r.outcome === 'failed').length,
+            results,
+        };
+    }
+
+    // Shared by both the single-employee sync and the bulk sync — everything after the
+    // employee has already been resolved (and, for a single sync, permission-checked).
+    private async performBiometricSync(
+        employee: any,
+        date: string | undefined,
+        contextUser: ITokenUser
+    ): Promise<IBiometricSyncResponse> {
         // Sanitized once here so the exact same clean name is both sent to the external
         // API and shown back to the admin — a stored firstName/lastName with hidden
         // whitespace (e.g. a tab from a spreadsheet copy-paste) shouldn't leak into either.
         const employeeName = sanitizeEmployeeNameForBiometricApi(
             `${employee.user!.firstName} ${employee.user!.lastName || ''}`
         );
-        const apiResponse = await fetchBiometricAttendance(employeeName, request.date);
+
+        let apiResponse;
+        try {
+            apiResponse = await fetchBiometricAttendance(employeeName, date);
+        } catch (error) {
+            if (error instanceof AppError && error.message === BIOMETRIC_EMPLOYEE_NOT_ENROLLED) {
+                return {
+                    employeeId: employee.id,
+                    employeeName,
+                    date: date || moment().tz('Asia/Karachi').format('YYYY-MM-DD'),
+                    hasRecord: false,
+                    stillCheckedIn: false,
+                    standardShiftMinutes: STANDARD_SHIFT_MINUTES,
+                    attendanceStatus: 'NOT_ENROLLED',
+                    statusMessage: "This employee hasn't been enrolled on the biometric device yet.",
+                };
+            }
+            throw error;
+        }
 
         const zkDeviceIdWarning = await this.reconcileZkDeviceUserId(employee, apiResponse.employee_id, contextUser);
 
-        const resolvedDate = apiResponse.filter?.date || request.date || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const resolvedDate = apiResponse.filter?.date || date || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
         const record = apiResponse.records.find(r => r.date === resolvedDate) ?? apiResponse.records[0];
 
         const baseResponse: IBiometricSyncResponse = {
@@ -610,7 +700,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
         // Persist regardless of clock-in/out completeness — an in-progress check-in is
         // still a real, save-worthy attendance record.
-        const attendance = await this.upsertBiometricAttendance(
+        await this.upsertBiometricAttendance(
             contextUser,
             employee,
             resolvedDate,

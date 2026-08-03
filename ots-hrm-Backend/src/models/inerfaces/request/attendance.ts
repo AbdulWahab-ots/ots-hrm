@@ -46,6 +46,11 @@ export interface IBiometricSyncRequest {
     date?: string;
 }
 
+// Admin-only: sync every active employee in the company for one date (default: today).
+export interface IBiometricBulkSyncRequest {
+    date?: string;
+}
+
 
 
 
