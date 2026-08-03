@@ -144,7 +144,9 @@ const CreateEmployee = ({
     departmentId: "",
     designationId: "",
     shiftId: "",
-    joiningDate: "",
+    // Defaults to today for a new hire (the common case) — editing an existing
+    // employee overrides this via ...initialValues below with their actual stored date.
+    joiningDate: isEdit ? "" : format(new Date(), "yyyy-MM-dd"),
     status: "PERMANENT",
     benefitId: "",
     benefits: [],
