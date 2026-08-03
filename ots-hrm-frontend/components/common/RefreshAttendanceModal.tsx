@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import CrossIcon from "../../public/Cross-icon.svg";
 import { RefreshCw, AlertCircle, Info } from "lucide-react";
@@ -32,13 +32,17 @@ interface RefreshAttendanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   employeeLabel?: string;
-  // The date to fetch, defaulting to today if not supplied. Re-fetches whenever this
-  // changes while open (e.g. the admin picks a different historical date).
+  // A specific date to fetch (e.g. refreshing one row's known date). Omit this when
+  // there's no specific date in mind ("just refresh this employee") — the initial
+  // fetch is then made with no date at all, letting the backend decide (today, or an
+  // overnight shift still open from yesterday) rather than us forcing today's date and
+  // short-circuiting that check. Re-fetches whenever this changes while open.
   initialDate?: string;
   // Returns the raw API result for the given date on success, or null on failure
   // (matches this app's apiHandler convention — errors already surface via toast, this
-  // just needs to know whether to show its own inline error state too).
-  onFetch: (date: string) => Promise<BiometricSyncResult | null>;
+  // just needs to know whether to show its own inline error state too). `date`
+  // undefined means "let the backend pick".
+  onFetch: (date?: string) => Promise<BiometricSyncResult | null>;
 }
 
 const STATUS_STYLES: Record<BiometricSyncResult["attendanceStatus"], string> = {
@@ -69,8 +73,13 @@ const RefreshAttendanceModal: React.FC<RefreshAttendanceModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<BiometricSyncResult | null>(null);
   const [selectedDate, setSelectedDate] = useState(initialDate || todayIso());
+  // Tracks whatever date the last fetch actually used (possibly undefined, for a
+  // "let the backend decide" fetch) so "Try again" repeats the same request rather
+  // than accidentally forcing today's date on retry.
+  const lastRequestedDateRef = useRef<string | undefined>(initialDate);
 
-  const runFetch = async (date: string) => {
+  const runFetch = async (date: string | undefined) => {
+    lastRequestedDateRef.current = date;
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -80,6 +89,10 @@ const RefreshAttendanceModal: React.FC<RefreshAttendanceModalProps> = ({
         setError("Unable to reach the attendance system. Please try again.");
       } else {
         setResult(data);
+        // Reflect whatever date the backend actually resolved to — e.g. it may have
+        // redirected to yesterday for a still-open overnight shift — rather than
+        // whatever we guessed before the response came back.
+        setSelectedDate(data.date);
       }
     } catch {
       setError("Unable to reach the attendance system. Please try again.");
@@ -90,9 +103,13 @@ const RefreshAttendanceModal: React.FC<RefreshAttendanceModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const date = initialDate || todayIso();
-      setSelectedDate(date);
-      runFetch(date);
+      if (initialDate) {
+        setSelectedDate(initialDate);
+        runFetch(initialDate);
+      } else {
+        setSelectedDate(todayIso());
+        runFetch(undefined);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -147,7 +164,7 @@ const RefreshAttendanceModal: React.FC<RefreshAttendanceModalProps> = ({
               <AlertCircle size={24} className="text-g-red-700" />
               <p className="text-copy-14 text-g-red-800">{error}</p>
               <button
-                onClick={() => runFetch(selectedDate)}
+                onClick={() => runFetch(lastRequestedDateRef.current)}
                 className="text-button-14 text-g-blue-700 hover:text-g-blue-800 cursor-pointer"
               >
                 Try again

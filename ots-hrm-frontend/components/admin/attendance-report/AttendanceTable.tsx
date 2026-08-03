@@ -31,7 +31,7 @@ import CountBadge from "@/components/common/CountBadge";
 const AttendanceTable = () => {
   const [localData, setLocalData] = useState<Attendance[]>([]);
   const [selectedRows, setSelectedRows] = useState<Attendance[]>([]);
-  const [refreshTarget, setRefreshTarget] = useState<{ employeeId: string; employeeName: string; date: string } | null>(null);
+  const [refreshTarget, setRefreshTarget] = useState<{ employeeId: string; employeeName: string; date?: string } | null>(null);
   const [isEmployeePickerOpen, setIsEmployeePickerOpen] = useState(false);
   const [pickerEmployees, setPickerEmployees] = useState<EmployeePickerOption[]>([]);
   const [isPickerLoading, setIsPickerLoading] = useState(false);
@@ -371,14 +371,6 @@ const AttendanceTable = () => {
     );
   };
 
-  const getLocalDateISO = () => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   const handleRefreshAttendance = (attendance: Attendance) => {
     if (!attendance.employee?.id) {
       toast.error("This employee record can't be refreshed (missing employee link).");
@@ -415,10 +407,13 @@ const AttendanceTable = () => {
 
   const handlePickEmployee = (employee: EmployeePickerOption) => {
     setIsEmployeePickerOpen(false);
+    // Date omitted on purpose — this is the "cold" employee-picker flow with no
+    // specific row/date in mind, so the backend should decide (today, or an overnight
+    // shift still open from yesterday) rather than us forcing today's date and
+    // short-circuiting that check.
     setRefreshTarget({
       employeeId: employee.id,
       employeeName: employee.name,
-      date: getLocalDateISO(),
     });
   };
 

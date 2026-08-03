@@ -594,7 +594,14 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             relations: { user: true },
         });
 
-        const resolvedDate = request.date || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const todayStr = moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const resolvedDate = request.date || todayStr;
+        // Only "today" (explicit or defaulted) should get the per-employee overnight
+        // check — an explicit historical date is honored literally for everyone, same
+        // as the single-employee flow. Passing undefined here (rather than resolvedDate)
+        // lets performBiometricSync's own resolveOvernightAwareDate() decide per
+        // employee, instead of one date being forced onto the whole batch upfront.
+        const isTodayRequest = resolvedDate === todayStr;
         const results: IBiometricBulkSyncEmployeeResult[] = [];
 
         for (const employee of employees) {
@@ -604,7 +611,11 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             );
 
             try {
-                const sync = await this.performBiometricSync(employee, resolvedDate, contextUser);
+                const sync = await this.performBiometricSync(
+                    employee,
+                    isTodayRequest ? undefined : resolvedDate,
+                    contextUser
+                );
                 results.push({
                     employeeId: employee.id,
                     employeeName,
@@ -639,6 +650,27 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
     // Shared by both the single-employee sync and the bulk sync — everything after the
     // employee has already been resolved (and, for a single sync, permission-checked).
+    // No explicit date requested ("today" by default) — but if yesterday still has an
+    // open check-in (checked in, never checked out) for this user, that's an overnight
+    // shift still in progress from the employee's perspective. The device keys the
+    // whole shift under the check-in's calendar date, so querying literal "today" would
+    // come back empty. Returns yesterday's date string in that case, otherwise undefined
+    // (meaning: let the device default to today, same as before).
+    private async resolveOvernightAwareDate(userId: string): Promise<string | undefined> {
+        const yesterday = moment().tz('Asia/Karachi').subtract(1, 'day').format('YYYY-MM-DD');
+
+        const openYesterdayRecord = await this.attendanceRepository.firstOrDefault({
+            where: {
+                userId,
+                date: yesterday as any,
+                checkInTime: Not(IsNull()),
+                checkOutTime: IsNull(),
+            },
+        });
+
+        return openYesterdayRecord ? yesterday : undefined;
+    }
+
     private async performBiometricSync(
         employee: any,
         date: string | undefined,
@@ -651,15 +683,25 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             `${employee.user!.firstName} ${employee.user!.lastName || ''}`
         );
 
+        // Overnight shift check: the device keys an overnight shift's whole record
+        // (check-in AND check-out) under the check-in's calendar date. If nothing
+        // explicit was requested (the caller means "today") and we already have an open
+        // check-in from yesterday for this employee, that's the shift still in progress
+        // — querying the device for literal "today" would find nothing, since the
+        // device has no record under today's date at all yet. Only kicks in for a
+        // genuinely open (no check-out) record, so a normal day-shift employee who
+        // already checked out yesterday is unaffected.
+        const effectiveDate = date ?? await this.resolveOvernightAwareDate(employee.userId);
+
         let apiResponse;
         try {
-            apiResponse = await fetchBiometricAttendance(employeeName, date);
+            apiResponse = await fetchBiometricAttendance(employeeName, effectiveDate);
         } catch (error) {
             if (error instanceof AppError && error.message === BIOMETRIC_EMPLOYEE_NOT_ENROLLED) {
                 return {
                     employeeId: employee.id,
                     employeeName,
-                    date: date || moment().tz('Asia/Karachi').format('YYYY-MM-DD'),
+                    date: effectiveDate || moment().tz('Asia/Karachi').format('YYYY-MM-DD'),
                     hasRecord: false,
                     stillCheckedIn: false,
                     standardShiftMinutes: STANDARD_SHIFT_MINUTES,
@@ -672,7 +714,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
         const zkDeviceIdWarning = await this.reconcileZkDeviceUserId(employee, apiResponse.employee_id, contextUser);
 
-        const resolvedDate = apiResponse.filter?.date || date || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const resolvedDate = apiResponse.filter?.date || effectiveDate || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
         const record = apiResponse.records.find(r => r.date === resolvedDate) ?? apiResponse.records[0];
 
         const baseResponse: IBiometricSyncResponse = {
