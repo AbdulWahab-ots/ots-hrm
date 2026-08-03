@@ -16,8 +16,10 @@ import {
   fetchAllShifts,
   fetchAllAttendance,
   refreshEmployeeAttendanceAPI,
+  getAllEmployeesAPI,
 } from "@/services/adminServices";
 import RefreshAttendanceModal from "@/components/common/RefreshAttendanceModal";
+import EmployeePickerModal, { EmployeePickerOption } from "@/components/common/EmployeePickerModal";
 import { AdminattendanceColumns } from "@/utils/Columns/AdminattendanceColumns";
 import { GetAttendancePayload, Attendance, Department } from "@/utils/types";
 import { setIsLoading } from "@/store/features/global/globalSlice";
@@ -28,6 +30,9 @@ const AttendanceTable = () => {
   const [localData, setLocalData] = useState<Attendance[]>([]);
   const [selectedRows, setSelectedRows] = useState<Attendance[]>([]);
   const [refreshTarget, setRefreshTarget] = useState<{ employeeId: string; employeeName: string; date: string } | null>(null);
+  const [isEmployeePickerOpen, setIsEmployeePickerOpen] = useState(false);
+  const [pickerEmployees, setPickerEmployees] = useState<EmployeePickerOption[]>([]);
+  const [isPickerLoading, setIsPickerLoading] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedShift, setSelectedShift] = useState("");
@@ -359,6 +364,14 @@ const AttendanceTable = () => {
     );
   };
 
+  const getLocalDateISO = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const handleRefreshAttendance = (attendance: Attendance) => {
     if (!attendance.employee?.id) {
       toast.error("This employee record can't be refreshed (missing employee link).");
@@ -368,6 +381,37 @@ const AttendanceTable = () => {
       employeeId: attendance.employee.id,
       employeeName: attendance.employee.name,
       date: attendance.date,
+    });
+  };
+
+  // Lets an admin refresh any employee's attendance regardless of whether they already
+  // have a row in this table — the table only lists existing Attendance records, so a
+  // brand-new employee with no synced history yet would otherwise have no row to click.
+  const handleOpenEmployeePicker = async () => {
+    setIsEmployeePickerOpen(true);
+    setIsPickerLoading(true);
+    try {
+      const response = await getAllEmployeesAPI(dispatch, {
+        pagedListRequest: { pageNo: 1, pageSize: 1000, getAllRecords: true },
+        queryOptionsRequest: { filtersRequest: [], sortRequest: [], includes: ["user"] },
+      });
+      const options: EmployeePickerOption[] = (response?.result?.data || []).map((emp) => ({
+        id: emp.id,
+        name: `${emp.user?.firstName || ""} ${emp.user?.lastName || ""}`.trim() || emp.employeeCode,
+        subtitle: emp.employeeCode,
+      }));
+      setPickerEmployees(options);
+    } finally {
+      setIsPickerLoading(false);
+    }
+  };
+
+  const handlePickEmployee = (employee: EmployeePickerOption) => {
+    setIsEmployeePickerOpen(false);
+    setRefreshTarget({
+      employeeId: employee.id,
+      employeeName: employee.name,
+      date: getLocalDateISO(),
     });
   };
 
@@ -415,6 +459,11 @@ const AttendanceTable = () => {
             <CountBadge count={totalItems} />
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <Button
+              label="Refresh Attendance"
+              variant="outline"
+              onClick={handleOpenEmployeePicker}
+            />
             {/* <CustomDropdown
               id="department-filter"
               name="department"
@@ -516,6 +565,14 @@ const AttendanceTable = () => {
           );
           return response?.result ?? null;
         }}
+      />
+
+      <EmployeePickerModal
+        isOpen={isEmployeePickerOpen}
+        onClose={() => setIsEmployeePickerOpen(false)}
+        employees={pickerEmployees}
+        isLoading={isPickerLoading}
+        onSelect={handlePickEmployee}
       />
     </>
   );
