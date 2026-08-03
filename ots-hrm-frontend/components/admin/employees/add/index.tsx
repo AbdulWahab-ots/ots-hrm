@@ -153,6 +153,7 @@ const CreateEmployee = ({
     bankName: "",
     ibanNumber: "",
     accountNumber: "",
+    zkDeviceUserId: "",
     ...initialValues,
   };
 

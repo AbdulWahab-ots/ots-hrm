@@ -606,6 +606,7 @@ const EmployeesTable = () => {
                   benefitId: employeeToEdit.benefitId || "",
                   salary: employeeToEdit.salary ?? "",
                   phoneNumber: employeeToEdit.phoneNumber || "",
+                  zkDeviceUserId: employeeToEdit.zkDeviceUserId || "",
                   bankName: employeeToEdit.bankName || "",
                   ibanNumber: employeeToEdit.ibanNumber || "",
                   accountNumber: employeeToEdit.accountNumber || "",

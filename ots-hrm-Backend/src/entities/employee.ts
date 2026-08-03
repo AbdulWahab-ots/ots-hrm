@@ -76,6 +76,12 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
     @Column({ type: 'text', nullable: true })
     ibanNumber?: string;
 
+    // Biometric device's internal employee ID (e.g. ZKTeco), for linking to the
+    // external attendance-sync integration. The external API currently matches by
+    // name, not this ID, but it's captured now for when the integration switches over.
+    @Column({ type: 'text', nullable: true })
+    zkDeviceUserId?: string;
+
     // Relations
     
     // User Relationship (One-to-One)
@@ -140,6 +146,7 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
             bankName: entity.bankName,
             accountNumber: entity.accountNumber,
             ibanNumber: entity.ibanNumber,
+            zkDeviceUserId: entity.zkDeviceUserId,
             // Related entities (will be populated if loaded)
             user: entity.user ? entity.user.toResponse() : undefined,
             department: entity.department ? entity.department.toResponse() : undefined,
@@ -167,7 +174,8 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
         this.bankName = requestEntity.bankName;
         this.accountNumber = requestEntity.accountNumber;
         this.ibanNumber = requestEntity.ibanNumber;
-        
+        this.zkDeviceUserId = requestEntity.zkDeviceUserId;
+
         if (contextUser) super.toCompanyEntity(contextUser, id);
         
         return this;

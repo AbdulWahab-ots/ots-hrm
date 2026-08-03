@@ -15,7 +15,9 @@ import {
   fetchAllDesignations,
   fetchAllShifts,
   fetchAllAttendance,
+  refreshEmployeeAttendanceAPI,
 } from "@/services/adminServices";
+import RefreshAttendanceModal from "@/components/common/RefreshAttendanceModal";
 import { AdminattendanceColumns } from "@/utils/Columns/AdminattendanceColumns";
 import { GetAttendancePayload, Attendance, Department } from "@/utils/types";
 import { setIsLoading } from "@/store/features/global/globalSlice";
@@ -25,6 +27,7 @@ import CountBadge from "@/components/common/CountBadge";
 const AttendanceTable = () => {
   const [localData, setLocalData] = useState<Attendance[]>([]);
   const [selectedRows, setSelectedRows] = useState<Attendance[]>([]);
+  const [refreshTarget, setRefreshTarget] = useState<{ employeeId: string; employeeName: string; date: string } | null>(null);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedShift, setSelectedShift] = useState("");
@@ -127,7 +130,7 @@ const AttendanceTable = () => {
       // A hard-deleted employee leaves attendance rows pointing at a user with no
       // employee profile anymore (they key off userId, not employeeId, and mostly
       // carry no FK back to Employee) — fall back instead of crashing the whole page.
-      const employee = user?.employee ?? { designationId: null, departmentId: null };
+      const employee = user?.employee ?? { id: null, designationId: null, departmentId: null };
       let status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" = "Absent";
       if (item.status === "PRESENT") {
         status = "PRESENT";
@@ -154,6 +157,7 @@ const AttendanceTable = () => {
         userId: item.userId,
         selected: false,
         employee: {
+          id: employee.id,
           name: user
             ? `${user.firstName} ${user.lastName || ""}`
             : "Unknown Employee",
@@ -355,6 +359,18 @@ const AttendanceTable = () => {
     );
   };
 
+  const handleRefreshAttendance = (attendance: Attendance) => {
+    if (!attendance.employee?.id) {
+      toast.error("This employee record can't be refreshed (missing employee link).");
+      return;
+    }
+    setRefreshTarget({
+      employeeId: attendance.employee.id,
+      employeeName: attendance.employee.name,
+      date: attendance.date,
+    });
+  };
+
   const handleSortChange = (
     columnId: string,
     isSorted: false | "asc" | "desc"
@@ -457,6 +473,7 @@ const AttendanceTable = () => {
               selectedRows,
               router,
               onSortChange: handleSortChange,
+              handleRefreshAttendance,
             }}
           />
 
@@ -481,6 +498,25 @@ const AttendanceTable = () => {
           </div>
         </div>
       </div>
+
+      <RefreshAttendanceModal
+        isOpen={!!refreshTarget}
+        onClose={() => {
+          setRefreshTarget(null);
+          const filters = buildFilters();
+          fetchAttendance(currentPage, filters);
+        }}
+        employeeLabel={refreshTarget?.employeeName}
+        onFetch={async () => {
+          if (!refreshTarget) return null;
+          const response = await refreshEmployeeAttendanceAPI(
+            dispatch,
+            refreshTarget.employeeId,
+            refreshTarget.date
+          );
+          return response?.result ?? null;
+        }}
+      />
     </>
   );
 };

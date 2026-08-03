@@ -15,3 +15,4 @@ export * from './app-response';
 export * from './mail-utility';
 export * from './general-utility';
 export * from './number-utility';
+export * from './biometric-attendance-utility';

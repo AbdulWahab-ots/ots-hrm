@@ -375,7 +375,9 @@ import {
   fetchEmployeeAttendance,
   fetchAttendanceStatus,
   createAttendanceRequestAPI,
+  refreshAttendanceAPI,
 } from "@/services/employeeService";
+import RefreshAttendanceModal from "@/components/common/RefreshAttendanceModal";
 import { convert24To12HourFormat } from "@/utils/helper";
 import EmployeeTimeCard from "./EmployeeTimeCard";
 import DashboardCards from "./DashbaordCard";
@@ -427,6 +429,7 @@ const EmployeeAttendance: React.FC = () => {
   const [punchInTime, setPunchInTime] = useState<Date | null>(null);
   const [punchOutTime, setPunchOutTime] = useState<Date | null>(null);
   const [refreshToken, setRefreshToken] = useState<number>(0);
+  const [isRefreshAttendanceOpen, setIsRefreshAttendanceOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const attendanceData = useSelector((state: RootState) => state.attendance);
@@ -669,7 +672,12 @@ const EmployeeAttendance: React.FC = () => {
           value={activeTab}
           onChange={(v) => handleTabChange(v as Tab)}
         />
-        <div className="self-end sm:self-auto">
+        <div className="self-end sm:self-auto flex gap-2">
+          <Button
+            label="Refresh Attendance"
+            variant="outline"
+            onClick={() => setIsRefreshAttendanceOpen(true)}
+          />
           <Button
             label="Add Request"
             variant="outline"
@@ -709,6 +717,19 @@ const EmployeeAttendance: React.FC = () => {
           initialDate={initialModalData?.date}
         />
       </CustomModal>
+
+      <RefreshAttendanceModal
+        isOpen={isRefreshAttendanceOpen}
+        onClose={() => {
+          setIsRefreshAttendanceOpen(false);
+          refetchAttendanceData();
+          setRefreshToken((t) => t + 1);
+        }}
+        onFetch={async () => {
+          const response = await refreshAttendanceAPI(dispatch);
+          return response?.result ?? null;
+        }}
+      />
     </div>
   );
 };

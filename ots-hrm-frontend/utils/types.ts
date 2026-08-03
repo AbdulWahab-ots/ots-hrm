@@ -929,6 +929,7 @@ export interface EmployeePayload {
   bankName: string; // New field for bank name
   ibanNumber: string; // New field for IBAN
   accountNumber: string;
+  zkDeviceUserId?: string; // Biometric device's internal employee ID
 }
 
 export interface Employee {
@@ -955,6 +956,7 @@ export interface Employee {
   bankName?: string | null;
   ibanNumber?: string | null;
   accountNumber?: string | null;
+  zkDeviceUserId?: string | null;
   user: {
     id: string;
     active: boolean;

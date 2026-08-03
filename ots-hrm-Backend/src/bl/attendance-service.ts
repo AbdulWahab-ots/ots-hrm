@@ -4,11 +4,24 @@ import { inject, injectable } from "tsyringe";
 import { AttendanceRepository, EmployeeRepository, AttendanceSummaryRepository, VacationRepository, PublicHolidayRepository } from "../dal";
 import { IsNull, In, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm";
 import { Attendance, AttendanceSummary } from "../entities";
-import { Actions, AttendanceStatus, FilterMatchModes, FilterOperators, IAttendanceRequest, IAttendanceResponse, ICheckInRequest, ICheckOutRequest, IDataSourceResponse, IFetchRequest, IStatusRequest, ITokenUser, IAttendanceStatsResponse, EmployeeStatus, PresentStatus, DayName, IAttendanceStatusResponse, RequestType, VacationStatus, NotificationType } from "../models";
+import { Actions, AttendanceStatus, FilterMatchModes, FilterOperators, IAttendanceRequest, IAttendanceResponse, ICheckInRequest, ICheckOutRequest, IDataSourceResponse, IFetchRequest, IStatusRequest, ITokenUser, IAttendanceStatsResponse, EmployeeStatus, PresentStatus, DayName, IAttendanceStatusResponse, RequestType, VacationStatus, NotificationType, IBiometricSyncRequest, IBiometricSyncResponse, BiometricAttendanceStatus } from "../models";
 import { Service } from "./generics/service";
 import { AppError } from "../utility/app-error";
 import { WorkingDaysService } from "./working-days-service";
 import { NotificationService } from "./notification-service";
+import { hasAdminAccess } from "../middlewares/permissions";
+import {
+    fetchBiometricAttendance,
+    parse12HourTimeTo24Hour,
+    diffMinutesAcrossMidnight,
+    formatMinutesAsHoursAndMinutes,
+} from "../utility/biometric-attendance-utility";
+
+// The company's official shift is fixed at 8.5 hours (5:30 PM – 2:00 AM) for the
+// purposes of this integration — independent of whatever Shift entity an employee is
+// individually assigned, since the biometric feed doesn't carry shift context.
+const STANDARD_SHIFT_MINUTES = 8.5 * 60;
+const ON_TIME_TOLERANCE_MINUTES = 5;
 
 // A pending check-in/out reminder for today, surfaced to the admin reminders view.
 export interface IAttendanceReminder {
@@ -546,6 +559,213 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         );
 
         return checkOutResponse.toResponse();
+    }
+
+    // Fetches an employee's attendance for a given date (default: today) from the
+    // biometric-device middleware, persists it into our own Attendance table (upsert by
+    // userId+date, so refreshing never creates duplicates), and returns the record
+    // alongside an overtime/undertime classification against the fixed 8.5h company shift.
+    public async syncFromBiometricDevice(
+        contextUser: ITokenUser,
+        request: IBiometricSyncRequest
+    ): Promise<IBiometricSyncResponse> {
+        const employee = await this.resolveEmployeeForBiometricSync(contextUser, request.employeeId);
+
+        const employeeName = `${employee.user!.firstName} ${employee.user!.lastName || ''}`.trim();
+        const apiResponse = await fetchBiometricAttendance(employeeName, request.date);
+
+        const zkDeviceIdWarning = await this.reconcileZkDeviceUserId(employee, apiResponse.employee_id, contextUser);
+
+        const resolvedDate = apiResponse.filter?.date || request.date || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const record = apiResponse.records.find(r => r.date === resolvedDate) ?? apiResponse.records[0];
+
+        const baseResponse: IBiometricSyncResponse = {
+            employeeId: employee.id,
+            employeeName,
+            date: resolvedDate,
+            hasRecord: !!record,
+            stillCheckedIn: false,
+            standardShiftMinutes: STANDARD_SHIFT_MINUTES,
+            attendanceStatus: 'NO_RECORD',
+            statusMessage: 'No attendance record found for this date.',
+            zkDeviceIdWarning,
+        };
+
+        if (!record) {
+            return baseResponse;
+        }
+
+        const checkIn24 = parse12HourTimeTo24Hour(record.check_in);
+        const checkOut24 = record.check_out === 'N/A' ? null : parse12HourTimeTo24Hour(record.check_out);
+
+        if (!checkIn24) {
+            return baseResponse;
+        }
+
+        // Persist regardless of clock-in/out completeness — an in-progress check-in is
+        // still a real, save-worthy attendance record.
+        const attendance = await this.upsertBiometricAttendance(
+            contextUser,
+            employee,
+            resolvedDate,
+            checkIn24,
+            checkOut24
+        );
+
+        if (!checkOut24) {
+            const nowMinutesToday = moment().tz('Asia/Karachi').format('HH:mm:ss');
+            const workedSoFar = diffMinutesAcrossMidnight(checkIn24, nowMinutesToday);
+            return {
+                ...baseResponse,
+                checkInTime: checkIn24,
+                stillCheckedIn: true,
+                workedMinutes: workedSoFar,
+                workedHoursLabel: formatMinutesAsHoursAndMinutes(workedSoFar),
+                attendanceStatus: 'IN_PROGRESS',
+                statusMessage: `Still checked in — ${formatMinutesAsHoursAndMinutes(workedSoFar)} so far.`,
+            };
+        }
+
+        const workedMinutes = diffMinutesAcrossMidnight(checkIn24, checkOut24);
+        const diffFromStandard = workedMinutes - STANDARD_SHIFT_MINUTES;
+
+        let attendanceStatus: BiometricAttendanceStatus;
+        let statusMessage: string;
+        if (Math.abs(diffFromStandard) <= ON_TIME_TOLERANCE_MINUTES) {
+            attendanceStatus = 'ON_TIME';
+            statusMessage = 'Completed full shift.';
+        } else if (diffFromStandard > 0) {
+            attendanceStatus = 'OVERTIME';
+            statusMessage = `Overtime: ${formatMinutesAsHoursAndMinutes(diffFromStandard)}`;
+        } else {
+            attendanceStatus = 'UNDERTIME';
+            statusMessage = `Short by ${formatMinutesAsHoursAndMinutes(-diffFromStandard)}`;
+        }
+
+        return {
+            ...baseResponse,
+            checkInTime: checkIn24,
+            checkOutTime: checkOut24,
+            stillCheckedIn: false,
+            workedMinutes,
+            workedHoursLabel: formatMinutesAsHoursAndMinutes(workedMinutes),
+            attendanceStatus,
+            statusMessage,
+        };
+    }
+
+    // First successful fetch for an employee auto-populates zkDeviceUserId from the
+    // device's employee_id — we currently match by name, so this ID is captured for
+    // future reliability/cross-checking, not used as the lookup key yet. On later
+    // fetches, a mismatch against the stored ID doesn't block anything (the name match
+    // still stands) but is surfaced as a warning, since it likely means two employees
+    // share a name and the wrong one's attendance was just fetched.
+    private async reconcileZkDeviceUserId(
+        employee: { id: string; zkDeviceUserId?: string },
+        deviceEmployeeId: string | undefined,
+        contextUser: ITokenUser
+    ): Promise<string | undefined> {
+        if (!deviceEmployeeId) return undefined;
+
+        if (!employee.zkDeviceUserId) {
+            await this.employeeRepository.partialUpdate(
+                employee.id,
+                { zkDeviceUserId: deviceEmployeeId },
+                contextUser
+            );
+            employee.zkDeviceUserId = deviceEmployeeId;
+            return undefined;
+        }
+
+        if (employee.zkDeviceUserId !== deviceEmployeeId) {
+            const warning = `Warning: returned employee ID (${deviceEmployeeId}) doesn't match previously recorded ID (${employee.zkDeviceUserId}) — please verify this is the correct employee.`;
+            console.warn(`[biometric-sync] zkDeviceUserId mismatch for employee ${employee.id}: stored=${employee.zkDeviceUserId}, returned=${deviceEmployeeId}`);
+            return warning;
+        }
+
+        return undefined;
+    }
+
+    // employeeId omitted -> resolve the caller's own employee record (employee dashboard);
+    // employeeId supplied for someone other than the caller -> only an admin may proceed.
+    private async resolveEmployeeForBiometricSync(contextUser: ITokenUser, employeeId?: string) {
+        const isSelf = !employeeId || employeeId === contextUser.employeeId;
+
+        if (!isSelf && !hasAdminAccess(contextUser)) {
+            throw new AppError('Forbidden. Admin access required to refresh another employee\'s attendance.', '403');
+        }
+
+        const employee = employeeId
+            ? await this.employeeRepository.firstOrDefault({
+                where: { id: employeeId, companyId: contextUser.companyId },
+                relations: { user: true },
+            })
+            : await this.employeeRepository.firstOrDefault({
+                where: { userId: contextUser.id, companyId: contextUser.companyId },
+                relations: { user: true },
+            });
+
+        if (!employee || !employee.user) {
+            throw new AppError('Employee not found.', '404');
+        }
+        return employee;
+    }
+
+    private async upsertBiometricAttendance(
+        contextUser: ITokenUser,
+        employee: { id: string; userId: string; shiftId?: string },
+        date: string,
+        checkIn24: string,
+        checkOut24: string | null
+    ): Promise<Attendance> {
+        const existing = await this.attendanceRepository.firstOrDefault({
+            where: { userId: employee.userId, date: date as any },
+        });
+
+        const workedMinutes = checkOut24 ? diffMinutesAcrossMidnight(checkIn24, checkOut24) : 0;
+        const lockWorkingHours = Math.round((workedMinutes / 60) * 100) / 100;
+        const shortfallMinutes = checkOut24 ? Math.max(0, STANDARD_SHIFT_MINUTES - workedMinutes) : 0;
+
+        const fields = {
+            checkInTime: checkIn24,
+            checkOutTime: checkOut24 ?? undefined,
+            status: AttendanceStatus.PRESENT,
+            presentStatus: checkOut24 ? PresentStatus.CHECK_OUT : PresentStatus.CHECK_IN,
+            shiftId: employee.shiftId,
+            totalWorkingHours: STANDARD_SHIFT_MINUTES / 60,
+            minimumRequiredWorkingHour: STANDARD_SHIFT_MINUTES / 60,
+            lockWorkingHours: checkOut24 ? lockWorkingHours : undefined,
+            earlyLeaveMinutes: Math.round(shortfallMinutes),
+            notes: 'Synced from biometric device',
+        };
+
+        if (existing) {
+            return this.attendanceRepository.partialUpdate(existing.id, fields, contextUser);
+        }
+
+        // toEntity() maps IAttendanceRequest.workingHours -> entity.lockWorkingHours and
+        // has no field for earlyLeaveMinutes at all, so both are set directly on the
+        // entity afterward rather than through the request DTO.
+        const attendanceEntity = new Attendance().toEntity(
+            {
+                userId: employee.userId,
+                shiftId: employee.shiftId,
+                date: date as any,
+                checkInTime: fields.checkInTime,
+                checkOutTime: fields.checkOutTime,
+                status: fields.status,
+                presentStatus: fields.presentStatus,
+                totalWorkingHours: fields.totalWorkingHours,
+                minimumRequiredWorkingHour: fields.minimumRequiredWorkingHour,
+                notes: fields.notes,
+            },
+            undefined,
+            contextUser
+        );
+        attendanceEntity.lockWorkingHours = fields.lockWorkingHours;
+        attendanceEntity.earlyLeaveMinutes = fields.earlyLeaveMinutes;
+
+        return this.attendanceRepository.invokeDbOperations(attendanceEntity, Actions.Add);
     }
 
     public async get(contextUser?: ITokenUser, fetchRequest?: IFetchRequest<IAttendanceRequest>): Promise<IDataSourceResponse<IAttendanceResponse>> {

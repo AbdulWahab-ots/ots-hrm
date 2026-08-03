@@ -34,3 +34,10 @@ export const startBreakSchema = z.object({
 export const endBreakSchema = z.object({
     breakId: z.string().uuid("breakId must be a valid UUID"),
 });
+
+// Biometric attendance sync schema — employeeId omitted resolves to the caller's own
+// employee record; date omitted defaults to today (resolved by the external API).
+export const biometricSyncSchema = z.object({
+    employeeId: z.string().uuid("employeeId must be a valid UUID").optional(),
+    date: dateString.optional(),
+});

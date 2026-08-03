@@ -50,6 +50,26 @@ export interface IBreakResponse {
     user?: IUserResponse
 }
 
+export type BiometricAttendanceStatus = 'OVERTIME' | 'UNDERTIME' | 'ON_TIME' | 'IN_PROGRESS' | 'NO_RECORD';
+
+export interface IBiometricSyncResponse {
+    employeeId: string;
+    employeeName: string;
+    date: string;
+    checkInTime?: string;   // 24-hour HH:mm:ss, null-ish (undefined) if no record
+    checkOutTime?: string;  // undefined if still checked in or no record
+    stillCheckedIn: boolean;
+    hasRecord: boolean;
+    workedMinutes?: number;
+    workedHoursLabel?: string; // e.g. "10h 43m"
+    standardShiftMinutes: number;
+    attendanceStatus: BiometricAttendanceStatus;
+    statusMessage: string;
+    // Non-blocking: the device's employee_id didn't match what we had on file for this
+    // employee (name-matching may have hit a different person). Admin should verify.
+    zkDeviceIdWarning?: string;
+}
+
 export interface IAttendanceStatsResponse {
     totalPresent: number;
     totalLate: number;

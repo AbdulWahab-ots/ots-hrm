@@ -38,6 +38,14 @@ export interface IStatusRequest {
     date: Date;
 }
 
+// employeeId omitted -> resolves to the requesting user's own employee record
+// (used by the employee's own dashboard); admins pass it explicitly to refresh
+// any employee under their company.
+export interface IBiometricSyncRequest {
+    employeeId?: string;
+    date?: string;
+}
+
 
 
 

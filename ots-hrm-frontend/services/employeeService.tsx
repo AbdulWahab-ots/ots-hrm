@@ -153,6 +153,17 @@ export const fetchAttendanceStatus = async (dispatch: AppDispatch) => {
   });
 };
 
+// Refresh attendance from the biometric device for the logged-in employee (today by
+// default). Saves the fetched record into our own Attendance table server-side.
+export const refreshAttendanceAPI = async (
+  dispatch: AppDispatch,
+  date?: string
+) => {
+  return apiHandler(dispatch, "post", "/attendance/biometric-sync", {
+    data: date ? { date } : {},
+  });
+};
+
 // Check-in api
 export const checkIn = async (dispatch: AppDispatch, data: any) => {
   const today = new Date();

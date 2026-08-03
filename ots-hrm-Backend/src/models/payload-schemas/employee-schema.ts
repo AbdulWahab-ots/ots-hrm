@@ -37,6 +37,7 @@ export const createEmployeeSchema = z.object(
         bankName: z.string().optional(),
         accountNumber: z.string().optional(),
         ibanNumber: z.string().optional(),
+        zkDeviceUserId: z.string().optional(),
     }
 );
 
@@ -75,6 +76,7 @@ export const updateEmployeeSchema = z.object(
         bankName: z.string().optional(),
         accountNumber: z.string().optional(),
         ibanNumber: z.string().optional(),
+        zkDeviceUserId: z.string().optional(),
     }
 );
 

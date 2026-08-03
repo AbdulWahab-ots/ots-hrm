@@ -38,6 +38,7 @@ export interface IEmployeeResponse extends ICompanyResponseBase {
     bankName?: string;
     accountNumber?: string;
     ibanNumber?: string;
+    zkDeviceUserId?: string;
     // Populated only when a deferred setup step did not complete (see IEmployeeSetupWarning)
     warnings?: IEmployeeSetupWarning[];
 }

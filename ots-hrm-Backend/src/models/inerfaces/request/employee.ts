@@ -23,4 +23,5 @@ export interface IEmployeeRequest {
     bankName?: string;
     accountNumber?: string;
     ibanNumber?: string;
+    zkDeviceUserId?: string;
 }

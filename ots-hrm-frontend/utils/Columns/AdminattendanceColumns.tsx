@@ -5,6 +5,12 @@ import { SlCup } from "react-icons/sl"; // For ON_LEAVE
 import { RxCross2 } from "react-icons/rx"; // For Absent
 import { HiOutlineExclamationCircle } from "react-icons/hi"; // For Late
 import { FiCoffee } from "react-icons/fi";
+import { RefreshCw } from "lucide-react";
+
+interface AdminAttendanceTableMeta {
+  handleRefreshAttendance?: (attendance: Attendance) => void;
+}
+
 export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
   {
     accessorKey: "employee",
@@ -150,4 +156,23 @@ export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
   //     </span>
   //   ),
   // },
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as AdminAttendanceTableMeta | undefined;
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            meta?.handleRefreshAttendance?.(row.original);
+          }}
+          title="Refresh Attendance"
+          className="text-g-gray-700 cursor-pointer hover:text-g-blue-700"
+        >
+          <RefreshCw size={16} />
+        </button>
+      );
+    },
+  },
 ];

@@ -2,14 +2,14 @@ import { inject, injectable } from "tsyringe";
 import { FastifyReply, FastifyRequest, preHandlerHookHandler, RouteHandlerMethod } from "fastify";
 import { ControllerBase } from "./generics/controller-base";
 import { CommonRoutes } from "../constants/commonRoutes";
-import { IFetchRequest, IFilter, IAttendanceRequest, IAttendanceResponse, IAttendanceStatusResponse, IGetSingleRecordFilter, ICheckOutRequest, ICheckInRequest, IStatusRequest, IStartBreakRequest, IEndBreakRequest } from "../models";
+import { IFetchRequest, IFilter, IAttendanceRequest, IAttendanceResponse, IAttendanceStatusResponse, IGetSingleRecordFilter, ICheckOutRequest, ICheckInRequest, IStatusRequest, IStartBreakRequest, IEndBreakRequest, IBiometricSyncRequest } from "../models";
 import { ExtendedRequest } from "../models/inerfaces/extended-Request";
 import { AttendanceService } from "../bl";
 import { AttendanceBreakService } from "../bl/attendance-break-service";
 import { authorize, validateCompanyHeader } from "../middlewares/authentication";
 import { requireAdminAccess } from "../middlewares/permissions";
 import { payloadValidator, bodyValidator, queryValidator, paramsValidator } from "../middlewares/payload-validator";
-import { uuidParamSchema, checkInSchema, checkOutSchema, statusSchema, startBreakSchema, endBreakSchema } from "../models/payload-schemas";
+import { uuidParamSchema, checkInSchema, checkOutSchema, statusSchema, startBreakSchema, endBreakSchema, biometricSyncSchema } from "../models/payload-schemas";
 import { AppResponse } from "../utility";
 
 
@@ -84,6 +84,12 @@ export class AttendanceController extends ControllerBase {
                 path: 'reminders/send',
                 middlewares: [requireAdminAccess()],
                 handler: this.sendReminders as RouteHandlerMethod
+            },
+            {
+                method: 'POST',
+                path: 'biometric-sync',
+                middlewares: [bodyValidator(biometricSyncSchema)],
+                handler: this.biometricSync as RouteHandlerMethod
             }
         ];
 
@@ -112,6 +118,22 @@ export class AttendanceController extends ControllerBase {
                 AppResponse.success(
                     "Reminders sent successfully",
                     await this.attendanceService.sendReminders(request.user, req.body?.userIds)
+                )
+            );
+        }
+    }
+
+    // Refresh an employee's attendance from the biometric device middleware — employeeId
+    // omitted resolves to the caller's own record (employee dashboard); an admin may pass
+    // employeeId to refresh anyone in their company (see AttendanceService for the guard).
+    private biometricSync = async (req: FastifyRequest<{Body: IBiometricSyncRequest}>, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            res.send(
+                AppResponse.success(
+                    "Attendance refreshed successfully",
+                    await this.attendanceService.syncFromBiometricDevice(request.user, req.body ?? {})
                 )
             );
         }
