@@ -4,7 +4,7 @@ import { IoCheckmarkSharp } from "react-icons/io5"; // For PRESENT
 import { SlCup } from "react-icons/sl"; // For ON_LEAVE
 import { RxCross2 } from "react-icons/rx"; // For Absent
 import { HiOutlineExclamationCircle } from "react-icons/hi"; // For Late
-import { FiCoffee } from "react-icons/fi";
+import { FiCoffee, FiCalendar } from "react-icons/fi"; // FiCalendar for DAY_OFF
 import { RefreshCw } from "lucide-react";
 
 interface AdminAttendanceTableMeta {
@@ -67,13 +67,18 @@ export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
         PRESENT: "text-g-green-800 bg-g-green-100",
         Absent: "text-g-red-800 bg-g-red-100",
         ON_LEAVE: "text-g-gray-900 bg-g-gray-100",
+        // A scheduled day off is not an unexcused absence — a distinct blue keeps it
+        // from reading as a negative/red status like Absent.
+        DAY_OFF: "text-g-blue-800 bg-g-blue-100",
       };
       const Icon = {
         PRESENT: IoCheckmarkSharp,
         ON_LEAVE: FiCoffee,
         Absent: RxCross2,
         Late: HiOutlineExclamationCircle,
+        DAY_OFF: FiCalendar,
       }[status];
+      const statusLabel = status === "DAY_OFF" ? "Day Off" : status;
 
       return (
         <span
@@ -81,7 +86,7 @@ export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
             }`}
         >
           {Icon && <Icon className="w-4 h-4 mb-0.5 font-bold" />}
-          {status}
+          {statusLabel}
         </span>
       );
     },

@@ -1203,7 +1203,7 @@ export interface Attendance {
     id: string;
     name: string;
   };
-  status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE";
+  status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" | "DAY_OFF";
  lockWorkingHours: number | null;
   isLate: boolean;
   checkInTime: string | null;

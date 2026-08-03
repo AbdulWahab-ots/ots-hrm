@@ -136,13 +136,17 @@ const AttendanceTable = () => {
       // employee profile anymore (they key off userId, not employeeId, and mostly
       // carry no FK back to Employee) — fall back instead of crashing the whole page.
       const employee = user?.employee ?? { id: null, designationId: null, departmentId: null };
-      let status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" = "Absent";
+      let status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" | "DAY_OFF" = "Absent";
       if (item.status === "PRESENT") {
         status = "PRESENT";
       } else if (item.status === "DEFAULT") {
         status = "Absent";
       } else if (item.status === "ON_LEAVE") {
         status = "ON_LEAVE";
+      } else if (item.status === "DAY_OFF") {
+        // A scheduled day off is not an unexcused absence — keep it visually and
+        // statistically distinct from "Absent" (see AttendanceOverview's stats calc).
+        status = "DAY_OFF";
       } else if (item.lateMinutes > 0) {
         status = "Late";
       }

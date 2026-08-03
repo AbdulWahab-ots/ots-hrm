@@ -357,27 +357,29 @@ export const sendCheckInOutReminders = async (
   });
 };
 
-// Fetch Attendance Stats api
-export const fetcAttendanceStats = async (dispatch: AppDispatch) => {
-  return apiHandler(dispatch, 'post', '/attendance/stats', {
+// Fetch attendance records (raw, no redux dispatch) for a date range — used by
+// dashboard/overview widgets that compute their own aggregates client-side and
+// shouldn't clobber the shared `attendance` redux slice the main table reads from.
+export const fetchAttendanceRecordsForRange = async (
+  dispatch: AppDispatch,
+  startDate: string,
+  endDate: string
+): Promise<any> => {
+  return apiHandler(dispatch, "post", "/attendance/get_all", {
     data: {
-      pagedListRequest: {
-        getAllRecords: true
-      },
+      pagedListRequest: { getAllRecords: true },
       queryOptionsRequest: {
         filtersRequest: [
           {
             field: "date",
-            operator: 10,
-            matchMode: 1,
-            rangeValues: {
-              start: "2025-06-16",
-              end: "2025-06-16"
-            }
-          }
-        ]
-      }
-    }
+            operator: 1,
+            matchMode: 10,
+            rangeValues: { start: startDate, end: endDate },
+          },
+        ],
+      },
+    },
+    showSuccessToast: false,
   });
 };
 
