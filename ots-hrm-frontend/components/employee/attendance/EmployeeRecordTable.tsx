@@ -354,8 +354,7 @@ const EmployeeRecordTable = ({
           Present: "PRESENT",
           Holiday: "HOLIDAY",
           Leave: "ON_LEAVE",
-          Absent: "DEFAULT",
-          Pending: "CHECK_IN",
+          Absent: "ABSENT",
           "": "", // For "All" option
         };
 
@@ -389,16 +388,25 @@ const EmployeeRecordTable = ({
                   : "Both",
               checkIn: record.checkInTime || null,
               checkOut: record.checkOutTime || null,
+              // record.status is the backend AttendanceStatus enum (DEFAULT, PRESENT,
+              // ABSENT, LATE, HALF_DAY, ON_LEAVE, HOLIDAY, DAY_OFF). DEFAULT means "not
+              // yet resolved" - e.g. today's row before check-in, or an overnight
+              // shift's "today" row while yesterday's shift is still open - and must
+              // NOT be shown as "Absent"; only the cron-assigned ABSENT status means
+              // that. A catch-all fallback here previously mapped DEFAULT (and LATE)
+              // straight to "Absent", which is what made an employee mid-overnight-shift
+              // look absent for today even though the absent-marking job hadn't touched
+              // their row at all.
               status:
-                record.status === "PRESENT"
+                record.status === "PRESENT" || record.status === "LATE" || record.status === "HALF_DAY"
                   ? "Present"
                   : record.status === "DAY_OFF" || record.status === "HOLIDAY"
                   ? "Holiday"
                   : record.status === "ON_LEAVE"
                   ? "Leave"
-                  : record.status === "CHECK_IN"
-                  ? "Pending"
-                  : "Absent",
+                  : record.status === "ABSENT"
+                  ? "Absent"
+                  : "Pending",
               date: record.date,
               reason: record.notes || null,
               hasCheckIn: !!record.checkInTime,

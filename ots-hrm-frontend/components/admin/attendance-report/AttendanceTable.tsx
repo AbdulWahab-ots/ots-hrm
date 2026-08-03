@@ -109,7 +109,7 @@ const AttendanceTable = () => {
     () => [
       { value: "", label: "All" },
       { value: "PRESENT", label: "Present" },
-      { value: "DEFAULT", label: "Absent" },
+      { value: "ABSENT", label: "Absent" },
       { value: "LATE", label: "Late" },
       { value: "ON_LEAVE", label: "Leave" },
     ],

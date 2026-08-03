@@ -456,16 +456,17 @@ const EmployeeAttendance: React.FC = () => {
       checkOut: record.checkOutTime
         ? convert24To12HourFormat(record.checkOutTime, "checkout")
         : null,
+      // See EmployeeRecordTable.tsx for why DEFAULT must map to "Pending", not "Absent".
       status:
-        record.status === "PRESENT"
+        record.status === "PRESENT" || record.status === "LATE" || record.status === "HALF_DAY"
           ? "Present"
           : record.status === "DAY_OFF" || record.status === "HOLIDAY"
             ? "Holiday"
             : record.status === "ON_LEAVE"
               ? "Leave"
-              : record.status === "CHECK_IN"
-                ? "Pending"
-                : "Absent",
+              : record.status === "ABSENT"
+                ? "Absent"
+                : "Pending",
       date: record.date,
       reason: record.notes || "No reason provided",
       presentStatus: record.presentStatus, // Ensure presentStatus is mapped

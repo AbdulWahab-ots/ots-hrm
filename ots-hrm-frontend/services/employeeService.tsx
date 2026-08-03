@@ -321,6 +321,37 @@ export const fetchLeaveStats = async (dispatch: AppDispatch) => {
   return apiHandler(dispatch, "get", "/vacation/leave-stats", {});
 };
 
+// Fetch the logged-in employee's own leave balance (remaining days per leave type
+// for the current year, entitlement minus approved/pending usage).
+export const fetchLeaveBalance = async (dispatch: AppDispatch) => {
+  return apiHandler(dispatch, "get", "/vacation/leave-balance", {});
+};
+
+// Fetch the logged-in employee's own attendance status counts (present/absent/
+// on-leave/etc). Backend scopes this to the caller's own records for non-admins.
+export const fetchOwnAttendanceStats = async (
+  dispatch: AppDispatch,
+  startDate: string,
+  endDate: string
+) => {
+  return apiHandler(dispatch, "post", "/attendance/stats", {
+    data: {
+      pagedListRequest: { pageNo: 1, pageSize: 10, getAllRecords: true },
+      queryOptionsRequest: {
+        filtersRequest: [
+          {
+            field: "date",
+            operator: 1,
+            matchMode: 10,
+            rangeValues: { start: startDate, end: endDate },
+          },
+        ],
+      },
+    },
+    showSuccessToast: false,
+  });
+};
+
 // Fetch any vacation by Id
 export const fetchVacationById = async (
   dispatch: AppDispatch,

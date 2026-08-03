@@ -1,51 +1,114 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { CircleAlert } from "lucide-react";
-import { IoCheckmarkSharp, IoGiftOutline } from "react-icons/io5";
-import { PiFootball, PiReceipt, PiReceiptLight } from "react-icons/pi";
-import { IoMdFingerPrint } from "react-icons/io";
-import { MdCalendarToday } from "react-icons/md";
+import { IoCheckmarkSharp } from "react-icons/io5";
+import { PiFootball, PiReceipt } from "react-icons/pi";
 import { IconType } from "react-icons"; // ✅ import IconType
-import { LuCalendar } from "react-icons/lu";
 import { GoPerson } from "react-icons/go";
+import { AppDispatch, RootState } from "@/store/store";
+import {
+  fetchLeaveBalance,
+  fetchOwnAttendanceStats,
+} from "@/services/employeeService";
+import { fetchPayrolls } from "@/services/payrollService";
+import { payrollToRow } from "@/components/admin/paystub/PayrollTable";
 
 interface CardData {
   name: string;
   tooltip: string;
   icon: IconType; // ✅ changed from StaticImageData → IconType
-  value: number;
-  percentage: string;
+  value: number | string;
 }
 
 const DashboardCards: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { profileData } = useSelector((state: RootState) => state.global) as {
+    profileData: any;
+  };
+
+  const [leaveBalance, setLeaveBalance] = useState<number | null>(null);
+  const [netSalary, setNetSalary] = useState<number | null>(null);
+  const [leaveAbsentCount, setLeaveAbsentCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchLeaveBalance(dispatch).then((res: any) => {
+      if (cancelled) return;
+      const balances = res?.result?.leaveBalances ?? [];
+      const total = balances.reduce(
+        (sum: number, b: any) => sum + (b.remainingLeaves ?? 0),
+        0
+      );
+      setLeaveBalance(total);
+    });
+
+    fetchPayrolls(dispatch, { page: 1, pageSize: 100 }).then((res: any) => {
+      if (cancelled) return;
+      const rows = (res?.result?.data ?? []).map(payrollToRow);
+      // Payrolls come back sorted oldest-first (see fetchPayrolls); the last row
+      // is the most recent payslip, whatever its approval status.
+      const latest = rows[rows.length - 1];
+      setNetSalary(latest ? latest.netSalary : 0);
+    });
+
+    const currentYear = new Date().getFullYear();
+    fetchOwnAttendanceStats(
+      dispatch,
+      `${currentYear}-01-01`,
+      `${currentYear}-12-31`
+    ).then((res: any) => {
+      if (cancelled) return;
+      const stats = res?.result;
+      setLeaveAbsentCount(
+        stats ? (stats.totalAbsent ?? 0) + (stats.totalOnLeave ?? 0) : 0
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
+
+  // Loaded once with the profile (see auth-service.getCurrentProfile, which already
+  // joins employee.benefits.benefit) — no separate fetch needed. Only count benefits
+  // that are currently in effect (not soft-deleted / not past their end date).
+  const activeBenefits: number = (profileData?.result?.employee?.benefits ?? []).filter(
+    (b: any) => {
+      if (b.active === false) return false;
+      if (!b.endDate) return true;
+      return new Date(b.endDate) >= new Date();
+    }
+  ).length;
+
+  const format = (value: number | null, prefix = ""): string =>
+    value === null ? "…" : `${prefix}${value.toLocaleString()}`;
+
   const data: CardData[] = [
     {
       name: "Leave Balance",
-      tooltip: "Total Leave Balance",
+      tooltip: "Remaining leave days across all leave types this year",
       icon: IoCheckmarkSharp,
-      value: 10,
-      percentage: "+9.01%",
+      value: format(leaveBalance),
     },
     {
       name: "Net Salary",
-      tooltip: "Employee Net Salary",
+      tooltip: "Net salary from your most recent payslip",
       icon: PiReceipt,
-      value: 10,
-      percentage: "+9.01%",
+      value: format(netSalary, "PKR "),
     },
     {
       name: "Leave/ Absent",
-      tooltip: "Employee Leave/ Absent",
+      tooltip: "Days on leave or marked absent this year",
       icon: PiFootball,
-      value: 10 / 1,
-      percentage: "+9.01%",
+      value: format(leaveAbsentCount),
     },
     {
       name: "Active Benefits",
-      tooltip: "Total Benefits",
+      tooltip: "Benefits currently assigned to you",
       icon: GoPerson,
-      value: 10,
-      percentage: "+9.01%",
+      value: activeBenefits,
     },
   ];
 
