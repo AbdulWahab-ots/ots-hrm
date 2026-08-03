@@ -314,7 +314,6 @@ const CreateHoliday = ({
                     : null,
               }}
               singleDateMode={!values.isMultiple}
-              incrementDates={true}
             />
             <FormActionBar onCancel={onCancel} cancelLabel="Back">
               <Button

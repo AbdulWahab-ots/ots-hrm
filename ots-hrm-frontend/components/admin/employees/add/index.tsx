@@ -617,7 +617,6 @@ const CreateEmployee = ({
                 <DateRangePickerModal
                   isOpen={isDateModalOpen}
                   onClose={() => setIsDateModalOpen(false)}
-                  incrementDates={true}
                   onSave={(range) => {
                     // toISOString() rolls local midnight back a day for any timezone
                     // ahead of UTC (e.g. PKT) — format() reads the local calendar date.

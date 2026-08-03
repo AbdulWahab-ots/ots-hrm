@@ -459,7 +459,6 @@ const CreateAttendanceRequest = ({
               }}
               initialRange={{ startDate: selectedDate, endDate: null }}
               singleDateMode={true}
-              incrementDates={true}
             />
             <FormActionBar onCancel={onCancel} cancelLabel="Back">
               <Button

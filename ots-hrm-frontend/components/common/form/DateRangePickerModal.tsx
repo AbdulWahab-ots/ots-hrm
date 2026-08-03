@@ -17,7 +17,6 @@ interface DateRangePickerModalProps {
   onSave: (range: DateRange) => void;
   initialRange?: DateRange;
   singleDateMode?: boolean;
-  incrementDates?: boolean; // New prop to control date increment
 }
 
 export default function DateRangePickerModal({
@@ -26,7 +25,6 @@ export default function DateRangePickerModal({
   onSave,
   initialRange,
   singleDateMode = false,
-  incrementDates = false, // Default to true for backward compatibility
 }: DateRangePickerModalProps) {
   const [step, setStep] = useState(1);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -95,22 +93,16 @@ export default function DateRangePickerModal({
   };
 
   const handleSave = () => {
+    // Submit exactly the date(s) clicked in the calendar below - react-datepicker's
+    // onChange already returns local-midnight Date objects for the clicked day, so no
+    // adjustment is needed here (a `+1 day` correction used to be applied unconditionally
+    // for every caller, silently submitting the day AFTER whatever the user picked).
     if (singleDateMode) {
       if (!dateRange.startDate) return;
-      const adjustedStart = new Date(dateRange.startDate);
-      if (incrementDates) {
-        adjustedStart.setDate(adjustedStart.getDate() + 1);
-      }
-      onSave({ startDate: adjustedStart, endDate: null });
+      onSave({ startDate: dateRange.startDate, endDate: null });
     } else {
       if (!dateRange.startDate || !dateRange.endDate) return;
-      const adjustedStart = new Date(dateRange.startDate);
-      const adjustedEnd = new Date(dateRange.endDate);
-      if (incrementDates) {
-        adjustedStart.setDate(adjustedStart.getDate() + 1);
-        adjustedEnd.setDate(adjustedEnd.getDate() + 1);
-      }
-      onSave({ startDate: adjustedStart, endDate: adjustedEnd });
+      onSave({ startDate: dateRange.startDate, endDate: dateRange.endDate });
     }
     onClose();
   };

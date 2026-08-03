@@ -698,7 +698,6 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
                 endDate: null,
               }}
               singleDateMode={true}
-              incrementDates={true}
             />
             <DateRangePickerModal
               isOpen={isToDateModalOpen}
@@ -714,7 +713,6 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
                 endDate: null,
               }}
               singleDateMode={true}
-              incrementDates={true}
             />
             <DateRangePickerModal
               isOpen={isSingleDateModalOpen}
@@ -732,7 +730,6 @@ const CreateLeaveRequest: React.FC<CreateLeaveRequestProps> = ({
                 endDate: null,
               }}
               singleDateMode={true}
-              incrementDates={true}
             />
             <FormActionBar onCancel={onCancel} cancelLabel="Back">
               <Button
