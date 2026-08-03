@@ -178,7 +178,12 @@ export const handleSignIn = async (dispatch: AppDispatch, values?: FormikValues)
             const roleCookie = JSON.stringify({
                 result: { role: { code: data?.result?.role?.code ?? "" } },
             });
-            document.cookie = `user=${roleCookie}; path=/`;
+            // Match the access token's ~10 day lifetime (see jwt-utility.ts). Without an
+            // explicit max-age this was a session cookie while localStorage["user"]
+            // persists indefinitely - closing the browser cleared the cookie but not
+            // localStorage, so middleware (cookie-based) and page-level auth checks
+            // (localStorage-based) disagreed on whether the user was logged in.
+            document.cookie = `user=${roleCookie}; path=/; max-age=${60 * 60 * 24 * 10}`;
             dispatch(setUser(data));
         },
         onError: () => dispatch(setUser(null))

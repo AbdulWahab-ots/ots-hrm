@@ -1,7 +1,6 @@
 // components/layouts/AuthLayout.tsx
 import React, { ReactNode } from "react";
 import AuthLayoutContent from "../auth/AuthLayoutContent";
-import { redirect } from "next/navigation";
 import Image from "next/image";
 import ThemeToggle from "../common/ThemeToggle";
 
@@ -16,18 +15,13 @@ export default function AuthLayout({
   children,
   showBackgroundShapes = false,
 }: AuthLayoutProps) {
-  if (typeof window !== "undefined") {
-    const userData = localStorage.getItem("user");
-    const user = userData ? JSON.parse(userData) : null;
-
-    if (user?.result?.role?.code === "companyAdmin") {
-      redirect("/admin/dashboard");
-    } else if (user?.result?.role?.code === "employee") {
-      redirect("/employee/dashboard");
-    } else if (user?.result?.role?.code === "superAdmin") {
-      redirect("/superadmin/dashboard");
-    }
-  }
+  // middleware.ts (checkSession) is the single source of truth for redirecting an
+  // already-authenticated user away from these auth pages — it reads the "user"
+  // cookie server-side before this component ever renders. A second, client-side
+  // redirect here (reading localStorage instead of the cookie) used to race against
+  // it: the cookie is a session cookie while localStorage persists across browser
+  // restarts, so the two could disagree and ping-pong between here and the
+  // dashboard route forever. Don't re-add a localStorage-based redirect.
   if (!leftContent) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-g-background-100 relative">
