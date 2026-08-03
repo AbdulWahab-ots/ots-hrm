@@ -14,10 +14,22 @@ export interface IBiometricAttendanceApiResponse {
     records: IBiometricAttendanceRecord[];
 }
 
+// The external API matches by literal name equality, so any hidden whitespace survives
+// straight through to a failed lookup — e.g. a tab character copy-pasted from a
+// spreadsheet into firstName/lastName. `.trim()` alone only strips the outer edges of
+// the combined string; it does nothing for a tab sitting between the first and last
+// name. Collapse every whitespace run (spaces, tabs, newlines) to a single space and
+// trim the ends, so the name we send is always exactly what a human would expect to see.
+export function sanitizeEmployeeNameForBiometricApi(name: string): string {
+    return name.replace(/\s+/g, " ").trim();
+}
+
 // Calls the DevOps biometric-device middleware. The API currently matches by employee
 // name (not the internal zkDeviceUserId we store) — see Employee.zkDeviceUserId for why
 // that field exists regardless. BIOMETRIC_API_URL is env-configured since it's currently
-// an ngrok tunnel that changes on restart.
+// an ngrok tunnel that changes on restart. The API also requires an x-api-key header,
+// sourced from ATTENDANCE_API_KEY — fail closed (never send the request unauthenticated)
+// if it's missing.
 export async function fetchBiometricAttendance(
     employeeName: string,
     date?: string
@@ -30,14 +42,57 @@ export async function fetchBiometricAttendance(
         );
     }
 
+    const apiKey = process.env.ATTENDANCE_API_KEY;
+    if (!apiKey) {
+        throw new AppError(
+            "Biometric attendance integration is not configured (ATTENDANCE_API_KEY is missing).",
+            "500"
+        );
+    }
+
+    // BIOMETRIC_API_URL is documented as the tunnel's base origin, but tolerate it
+    // already including the /api/attendance path too (easy to paste either way) —
+    // normalize instead of risking a doubled-up path like ".../api/attendance/api/attendance".
+    const normalizedBase = baseUrl.replace(/\/$/, "").replace(/\/api\/attendance$/, "");
+
+    const sanitizedName = sanitizeEmployeeNameForBiometricApi(employeeName);
+
     try {
         const response = await axios.post<IBiometricAttendanceApiResponse>(
-            `${baseUrl.replace(/\/$/, "")}/api/attendance`,
-            { employee: employeeName, ...(date ? { date } : {}) },
-            { timeout: 10_000 }
+            `${normalizedBase}/api/attendance`,
+            { employee: sanitizedName, ...(date ? { date } : {}) },
+            {
+                timeout: 15_000,
+                headers: {
+                    "x-api-key": apiKey,
+                    // Free-tier ngrok tunnels can serve an HTML interstitial warning page
+                    // instead of proxying the request when the caller doesn't look like a
+                    // browser (no browser-typical Accept/User-Agent) — this header bypasses
+                    // that page. Harmless no-op against a non-ngrok or paid endpoint.
+                    "ngrok-skip-browser-warning": "true",
+                },
+            }
         );
         return response.data;
     } catch (error) {
+        // The previous version of this catch swallowed the real cause entirely — every
+        // failure surfaced as the same generic message with nothing in the server logs
+        // to diagnose from. Log the concrete underlying error so a future failure (bad
+        // key, tunnel down, timeout, unexpected response shape) is actually traceable.
+        if (axios.isAxiosError(error)) {
+            console.error(
+                "[biometric-attendance] request failed:",
+                {
+                    message: error.message,
+                    code: error.code,
+                    status: error.response?.status,
+                    responseData: error.response?.data,
+                    url: `${normalizedBase}/api/attendance`,
+                }
+            );
+        } else {
+            console.error("[biometric-attendance] unexpected error:", error);
+        }
         throw new AppError(
             "Unable to reach the attendance system. Please try again.",
             "502"

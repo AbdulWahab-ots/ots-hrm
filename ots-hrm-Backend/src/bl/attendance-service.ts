@@ -15,6 +15,7 @@ import {
     parse12HourTimeTo24Hour,
     diffMinutesAcrossMidnight,
     formatMinutesAsHoursAndMinutes,
+    sanitizeEmployeeNameForBiometricApi,
 } from "../utility/biometric-attendance-utility";
 
 // The company's official shift is fixed at 8.5 hours (5:30 PM – 2:00 AM) for the
@@ -571,7 +572,12 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
     ): Promise<IBiometricSyncResponse> {
         const employee = await this.resolveEmployeeForBiometricSync(contextUser, request.employeeId);
 
-        const employeeName = `${employee.user!.firstName} ${employee.user!.lastName || ''}`.trim();
+        // Sanitized once here so the exact same clean name is both sent to the external
+        // API and shown back to the admin — a stored firstName/lastName with hidden
+        // whitespace (e.g. a tab from a spreadsheet copy-paste) shouldn't leak into either.
+        const employeeName = sanitizeEmployeeNameForBiometricApi(
+            `${employee.user!.firstName} ${employee.user!.lastName || ''}`
+        );
         const apiResponse = await fetchBiometricAttendance(employeeName, request.date);
 
         const zkDeviceIdWarning = await this.reconcileZkDeviceUserId(employee, apiResponse.employee_id, contextUser);
