@@ -301,6 +301,12 @@ export interface EmployeeRecord {
   reason: string | null;
   hasCheckIn?: boolean;
   hasCheckOut?: boolean;
+  // Actual hours worked (lockWorkingHours) vs the standard for this row
+  // (totalWorkingHours - 8.5h for biometric-synced rows, see attendance-service.ts).
+  // Both come straight off the Attendance entity; classifyWorkedHours() derives the
+  // Overtime/Undertime label from them.
+  workedHours?: number | null;
+  standardHours?: number | null;
 }
 
 const EmployeeRecordTable = ({
@@ -411,6 +417,8 @@ const EmployeeRecordTable = ({
               reason: record.notes || null,
               hasCheckIn: !!record.checkInTime,
               hasCheckOut: !!record.checkOutTime,
+              workedHours: record.lockWorkingHours != null ? Number(record.lockWorkingHours) : null,
+              standardHours: record.totalWorkingHours != null ? Number(record.totalWorkingHours) : null,
             })
           );
           setLocalData(transformedData);

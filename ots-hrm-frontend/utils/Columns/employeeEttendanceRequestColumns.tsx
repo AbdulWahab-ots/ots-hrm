@@ -1,5 +1,6 @@
 // utils/Columns/employeeEttendanceRequestColumns.tsx
 import { ColumnDef } from "@tanstack/react-table";
+import { classifyWorkedHours } from "@/utils/attendanceHours";
 
 export interface EmployeeRecord {
   id: string;
@@ -10,6 +11,8 @@ export interface EmployeeRecord {
   status: "Present" | "Holiday" | "Leave" | "Absent" | "Pending";
   date: string;
   reason: string | null;
+  workedHours?: number | null;
+  standardHours?: number | null;
 }
 
 // Status colors matching the calendar styling
@@ -113,6 +116,37 @@ export const employeeEttendanceRequestColumns: ColumnDef<
       const v = formatTime(info.getValue());
       return (
         <div className={v === "--" ? "text-g-gray-600" : "text-g-gray-900"}>{v}</div>
+      );
+    },
+  },
+  {
+    id: "totalHours",
+    header: "Total Hours",
+    cell: (info: any) => {
+      const record = info.row.original as EmployeeRecord;
+      const worked = record.workedHours;
+      if (worked == null) {
+        return <div className="text-g-gray-600">--</div>;
+      }
+      const hours = Math.floor(worked);
+      const minutes = Math.round((worked - hours) * 60);
+      const classification = classifyWorkedHours(worked, record.standardHours);
+      const classificationStyles: Record<string, string> = {
+        overtime: "text-g-amber-900",
+        undertime: "text-g-red-800",
+        on_time: "text-g-green-800",
+      };
+      return (
+        <div className="flex flex-col">
+          <span className="text-g-gray-900">
+            {hours}h {minutes}m
+          </span>
+          {classification.kind !== "none" && (
+            <span className={`text-label-12 font-medium ${classificationStyles[classification.kind]}`}>
+              {classification.label}
+            </span>
+          )}
+        </div>
       );
     },
   },

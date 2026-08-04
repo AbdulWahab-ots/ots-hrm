@@ -6,6 +6,7 @@ import { RxCross2 } from "react-icons/rx"; // For Absent
 import { HiOutlineExclamationCircle } from "react-icons/hi"; // For Late
 import { FiCoffee, FiCalendar } from "react-icons/fi"; // FiCalendar for DAY_OFF
 import { RefreshCw } from "lucide-react";
+import { classifyWorkedHours } from "@/utils/attendanceHours";
 
 interface AdminAttendanceTableMeta {
   handleRefreshAttendance?: (attendance: Attendance) => void;
@@ -120,10 +121,23 @@ export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
         );
       const hours = Math.floor(totalHours);
       const minutes = Math.round((totalHours - hours) * 60);
+      const classification = classifyWorkedHours(totalHours, row.original.totalHours);
+      const classificationStyles: Record<string, string> = {
+        overtime: "text-g-amber-900",
+        undertime: "text-g-red-800",
+        on_time: "text-g-green-800",
+      };
       return (
-        <span className="text-g-gray-800 text-sm font-normal">
-          {hours}h {minutes}m
-        </span>
+        <div className="flex flex-col">
+          <span className="text-g-gray-800 text-sm font-normal">
+            {hours}h {minutes}m
+          </span>
+          {classification.kind !== "none" && (
+            <span className={`text-xs font-medium ${classificationStyles[classification.kind]}`}>
+              {classification.label}
+            </span>
+          )}
+        </div>
       );
     },
   },
