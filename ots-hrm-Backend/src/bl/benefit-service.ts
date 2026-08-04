@@ -196,7 +196,7 @@ export class BenefitService extends Service<Benefit, IBenefitResponse, IBenefitR
             );
         }
 
-        await this.benefitRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser);
+        await this.benefitRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser, undefined, ['active', 'deleted']);
     }
 
 }

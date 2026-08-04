@@ -38,7 +38,7 @@ export class LeaveTypeService extends Service<LeaveType, ILeaveTypeResponse, ILe
         // No other entity references LeaveType yet, so there is nothing to block on today.
         // Still soft-delete (instead of hard-removing) so it disappears from active lists
         // while staying intact for whichever leave-request/leave-balance feature lands next.
-        await this.leaveTypeRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser);
+        await this.leaveTypeRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser, undefined, ['active', 'deleted']);
     }
 
 }

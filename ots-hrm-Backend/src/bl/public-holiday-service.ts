@@ -64,7 +64,7 @@ export class PublicHolidayService extends Service<PublicHoliday, IPublicHolidayR
 
         // Soft delete instead of hard-removing, so the holiday stays available for
         // historical/audit purposes while disappearing from active lists.
-        await this.publicHolidayRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser);
+        await this.publicHolidayRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser, undefined, ['active', 'deleted']);
     }
 
     /**

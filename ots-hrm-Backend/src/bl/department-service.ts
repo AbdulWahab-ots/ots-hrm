@@ -146,7 +146,7 @@ export class DepartmentService extends Service<Department, IDepartmentResponse, 
 
         // Nothing references this department anymore - soft delete so it disappears
         // from active lists/dropdowns while keeping the row for history/audit.
-        await this.departmentRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser);
+        await this.departmentRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser, undefined, ['active', 'deleted']);
     }
 
 }

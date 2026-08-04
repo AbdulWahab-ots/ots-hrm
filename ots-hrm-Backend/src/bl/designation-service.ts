@@ -67,7 +67,7 @@ export class DesignationService extends Service<Designation, IDesignationRespons
             );
         }
 
-        await this.designationRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser);
+        await this.designationRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser, undefined, ['active', 'deleted']);
     }
 
 }

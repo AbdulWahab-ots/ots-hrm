@@ -18,7 +18,7 @@ export class SkillService extends Service<Skill, ISkillResponse, ISkillRequest> 
     async delete(id: string, contextUser: ITokenUser): Promise<void> {
         const inUse = await this.scoreRepository.countBySkill(id);
         if (inUse > 0) {
-            await this.skillRepository.partialUpdate(id, { active: false } as any, contextUser);
+            await this.skillRepository.partialUpdate(id, { active: false } as any, contextUser, undefined, ['active']);
             return;
         }
         await super.delete(id, contextUser);

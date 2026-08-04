@@ -188,7 +188,7 @@ export class UserService extends Service<User, IUserResponse, IUserRequest> {
             }
         }
 
-        const updated = await this.userRepository.partialUpdate(userId, { active: isActive } as any, contextUser);
+        const updated = await this.userRepository.partialUpdate(userId, { active: isActive } as any, contextUser, undefined, ['active']);
         return updated.toResponse(updated);
     }
 

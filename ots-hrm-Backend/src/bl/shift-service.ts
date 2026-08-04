@@ -95,6 +95,6 @@ export class ShiftService extends Service<Shift, IShiftResponse, IShiftRequest> 
             );
         }
 
-        await this.shiftRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser);
+        await this.shiftRepository.partialUpdate(id, { deleted: true, active: false } as any, contextUser, undefined, ['active', 'deleted']);
     }
 }
