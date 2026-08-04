@@ -19,6 +19,7 @@ import { GetRequestsPayload } from "@/utils/types";
 import CustomModal from "@/components/common/CustomModal";
 import CreateAttendanceRequest from "../attendance/AddRequest";
 import CustomDropdown from "@/components/common/form/DropDown";
+import { BUSINESS_TIMEZONE } from "@/utils/timezone";
 
 export interface Employee {
   id?: string;
@@ -183,11 +184,11 @@ const EmployeeRequestTable = () => {
 
             // Format the date as "6 Sep, 2025" (3-letter month)
             const formattedDate = request.date
-              ? new Date(request.date).toLocaleDateString("en-PK", {
+              ? new Date(request.date).toLocaleDateString("en-US", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
-                timeZone: "Asia/Karachi",
+                timeZone: BUSINESS_TIMEZONE,
               })
               : "N/A";
 

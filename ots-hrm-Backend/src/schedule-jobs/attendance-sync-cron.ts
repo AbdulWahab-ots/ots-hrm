@@ -5,8 +5,9 @@ import { AttendanceService } from '../bl/attendance-service';
 import { ITokenUser } from '../models';
 import { EmptyGuid } from '../constants';
 import { emitAttendanceUpdate } from '../socket/socket-io';
+import { BUSINESS_TIMEZONE } from '../utility/timezone-utility';
 
-const TIMEZONE = 'Asia/Karachi';
+const TIMEZONE = BUSINESS_TIMEZONE;
 // Every 30 seconds - leadership wants attendance to look "live" on both the Admin
 // and Employee sides without anyone clicking Refresh/Sync All. The biometric
 // middleware is pull-only, so this is the polling half of that; Socket.IO

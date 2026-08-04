@@ -13,6 +13,7 @@ import {
 } from "@/services/employeeService";
 import { fetchPayrolls } from "@/services/payrollService";
 import { payrollToRow } from "@/components/admin/paystub/PayrollTable";
+import { nowBusiness } from "@/utils/timezone";
 
 interface CardData {
   name: string;
@@ -53,7 +54,7 @@ const DashboardCards: React.FC = () => {
       setNetSalary(latest ? latest.netSalary : 0);
     });
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = nowBusiness().getFullYear();
     fetchOwnAttendanceStats(
       dispatch,
       `${currentYear}-01-01`,
@@ -78,7 +79,7 @@ const DashboardCards: React.FC = () => {
     (b: any) => {
       if (b.active === false) return false;
       if (!b.endDate) return true;
-      return new Date(b.endDate) >= new Date();
+      return new Date(b.endDate) >= nowBusiness();
     }
   ).length;
 

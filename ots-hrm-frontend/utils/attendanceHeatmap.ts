@@ -3,6 +3,8 @@
    and tweak. The intensity mapping lives in ONE place: attendanceLevel().
    ========================================================================== */
 
+import { nowBusiness } from "./timezone";
+
 export interface HeatRecord {
   date: string; // "YYYY-MM-DD" (may carry a time suffix; we only read the first 10 chars)
   status?: string | null;
@@ -113,7 +115,7 @@ export function buildWeeks(
   from: Date,
   to: Date,
   records: HeatRecord[],
-  today: Date = new Date()
+  today: Date = nowBusiness()
 ): DayInfo[][] {
   const byDate = new Map<string, HeatRecord>();
   for (const r of records) byDate.set(r.date.slice(0, 10), r);
@@ -148,7 +150,7 @@ export interface HeatStats {
 }
 
 /** Summary stats over the in-range, non-future days. */
-export function computeStats(weeks: DayInfo[][], today: Date = new Date()): HeatStats {
+export function computeStats(weeks: DayInfo[][], today: Date = nowBusiness()): HeatStats {
   const days = weeks
     .flat()
     .filter((d) => d.inRange && !d.future)

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { fetchAttendanceRecordsForRange } from "@/services/adminServices";
 import { AppDispatch } from "@/store/store";
+import { nowBusiness } from "@/utils/timezone";
 
 type DayStat = { name: string; present: number; total: number };
 
@@ -15,9 +16,9 @@ const formatLocalDate = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-// Monday..Friday of the current (local) week, as local-date strings.
+// Monday..Friday of the current business (America/New_York) week, as date strings.
 const getCurrentWeekdays = (): { name: string; date: string }[] => {
-  const now = new Date();
+  const now = nowBusiness();
   const dayOfWeek = now.getDay(); // 0=Sun..6=Sat
   const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const monday = new Date(now);

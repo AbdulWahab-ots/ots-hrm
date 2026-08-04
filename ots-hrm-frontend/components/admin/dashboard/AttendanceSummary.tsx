@@ -14,6 +14,7 @@ import {
   rejectVocationRequest,
 } from "@/services/adminServices";
 import Button from "@/components/common/Button";
+import { nowBusiness } from "@/utils/timezone";
 
 import { FiExternalLink } from "react-icons/fi";
 import { useRouter } from "next/navigation";
@@ -47,7 +48,7 @@ const AttendanceSummary: React.FC = () => {
   // Fetch leaves from API for today to tomorrow
   const fetchLeaves = useCallback(
     async (statusFilter: "PENDING" | "APPROVED") => {
-      const today = new Date(); // Current date
+      const today = nowBusiness();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1); // Today + 1 day
       const startDate = formatLocalDate(today);

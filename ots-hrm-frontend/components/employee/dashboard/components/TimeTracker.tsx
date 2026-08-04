@@ -14,6 +14,7 @@ import SuccessConfirmation from "@/components/common/SuccessConfirmation";
 import { createLeaveRequestAPI } from "@/services/employeeService";
 import { triggerLeaveRefresh } from "@/store/features/global/globalSlice";
 import QuickActions from "@/components/employee/leaves/QuickActions";
+import { nowBusiness } from "@/utils/timezone";
 
 
 
@@ -46,7 +47,7 @@ const TimeTrackingCard: React.FC<TimeTrackingCardProps> = ({
   // Function to calculate time difference for the timer
   const calculateTimeDifference = (
     startTime: Date,
-    endTime: Date = new Date()
+    endTime: Date = nowBusiness()
   ) => {
     const diff = endTime.getTime() - startTime.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -114,7 +115,7 @@ const TimeTrackingCard: React.FC<TimeTrackingCardProps> = ({
   useEffect(() => {
     if (isPunchedIn && punchInTime) {
       const interval = setInterval(() => {
-        const now = new Date();
+        const now = nowBusiness();
         const timeDiff = calculateTimeDifference(punchInTime, now);
         setElapsedTime(timeDiff);
       }, 1000);

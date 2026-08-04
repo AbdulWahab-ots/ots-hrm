@@ -17,6 +17,7 @@ import { setIsLoading } from "@/store/features/global/globalSlice";
 import { PayrollColumns } from "@/utils/Columns/PayrollColumns";
 import PayrollView from "./PayrollView";
 import CountBadge from "@/components/common/CountBadge";
+import { nowBusiness } from "@/utils/timezone";
 import {
   fetchPayrolls as apiFetchPayrolls,
   updatePayrollStatus,
@@ -144,7 +145,7 @@ const PayrollTable = () => {
   }, [dispatch, departments, hasInitialized]);
 
   const periodFilter = useCallback(() => {
-    const now = new Date();
+    const now = nowBusiness();
     const y = now.getFullYear();
     const m = now.getMonth() + 1; // 1-12
     if (activeFilter === "Recent") return { payrollYear: y, payrollMonth: m };

@@ -14,6 +14,7 @@ import { ProfileResponse } from "@/utils/types";
 import EmployeeIcon from "../../../../public/Employee-icon.svg";
 import Image from "next/image";
 import { DragToClock } from "@/components/common/DragToClock";
+import { nowBusiness } from "@/utils/timezone";
 
 interface EmployeeCardProps {
   profileData: ProfileResponse | null; // Accept profileData directly
@@ -70,7 +71,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   };
 
   const formatDate = () => {
-    const now = new Date();
+    const now = nowBusiness();
     const dayName = new Intl.DateTimeFormat("en-US", {
       weekday: "long",
     }).format(now);
@@ -149,15 +150,15 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   }
 
   const getLocalDateISO = () => {
-    const d = new Date();
+    const d = nowBusiness();
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`; // Local calendar date, not UTC-based
+    return `${year}-${month}-${day}`; // Business calendar date (America/New_York)
   };
 
   const handleClick = async () => {
-    const now = new Date();
+    const now = nowBusiness();
     const currentDate = getLocalDateISO();
     const currentTime = now.toTimeString().split(" ")[0];
 

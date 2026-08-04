@@ -11,6 +11,7 @@ import {
   subMonths,
 } from "date-fns";
 import { Check } from "lucide-react";
+import { nowBusiness } from "@/utils/timezone";
 
 interface DateRange {
   startDate: Date | null;
@@ -78,7 +79,7 @@ export default function DateRangeField({
   }, [value]);
 
   const handleRangeSelect = (option: string) => {
-    const today = new Date(); // Use current date
+    const today = nowBusiness(); // Business "today" (America/New_York), not browser-local
     let start: Date | null = null;
     let end: Date | null = null;
 

@@ -18,10 +18,12 @@ import {
     sanitizeEmployeeNameForBiometricApi,
     BIOMETRIC_EMPLOYEE_NOT_ENROLLED,
 } from "../utility/biometric-attendance-utility";
+import { BUSINESS_TIMEZONE, DEVICE_TIMEZONE, convertDeviceTimeToBusiness } from "../utility/timezone-utility";
 
-// The company's official shift is fixed at 8.5 hours (5:30 PM – 2:00 AM) for the
-// purposes of this integration — independent of whatever Shift entity an employee is
-// individually assigned, since the biometric feed doesn't carry shift context.
+// The company's official shift is fixed at 8.5 hours (8:30 AM – 5:00 PM
+// BUSINESS_TIMEZONE) for the purposes of this integration — independent of whatever
+// Shift entity an employee is individually assigned, since the biometric feed doesn't
+// carry shift context.
 const STANDARD_SHIFT_MINUTES = 8.5 * 60;
 const ON_TIME_TOLERANCE_MINUTES = 5;
 
@@ -56,7 +58,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
      * Employees on leave / holiday / a day off are not expected to work, so skipped.
      */
     public async getPendingReminders(contextUser: ITokenUser): Promise<IAttendanceReminder[]> {
-        const todayStr = moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const todayStr = moment().tz(BUSINESS_TIMEZONE).format('YYYY-MM-DD');
 
         // `date` is a Postgres `date` column — match with the YYYY-MM-DD string, not a
         // JS Date (which serializes to a full timestamp and misses the equality).
@@ -131,8 +133,8 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
     }
 
     private async defaultAttendanceRecord(contextUser: ITokenUser): Promise<{ created: number; existing: number }> {
-        const today = new Date(moment().tz('Asia/Karachi').format('YYYY-MM-DD'));
-        const todayStr = moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const today = new Date(moment().tz(BUSINESS_TIMEZONE).format('YYYY-MM-DD'));
+        const todayStr = moment().tz(BUSINESS_TIMEZONE).format('YYYY-MM-DD');
 
         const employees = await this.employeeRepository.getCompanyRecords(contextUser.companyId, {
             where: {
@@ -621,7 +623,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             relations: { user: true },
         });
 
-        const todayStr = moment().tz('Asia/Karachi').format('YYYY-MM-DD');
+        const todayStr = moment().tz(BUSINESS_TIMEZONE).format('YYYY-MM-DD');
         const resolvedDate = date || todayStr;
         // Only "today" (explicit or defaulted) should get the per-employee overnight
         // check — an explicit historical date is honored literally for everyone, same
@@ -686,7 +688,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
     // come back empty. Returns yesterday's date string in that case, otherwise undefined
     // (meaning: let the device default to today, same as before).
     private async resolveOvernightAwareDate(userId: string): Promise<string | undefined> {
-        const yesterday = moment().tz('Asia/Karachi').subtract(1, 'day').format('YYYY-MM-DD');
+        const yesterday = moment().tz(BUSINESS_TIMEZONE).subtract(1, 'day').format('YYYY-MM-DD');
 
         const openYesterdayRecord = await this.attendanceRepository.firstOrDefault({
             where: {
@@ -730,7 +732,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
                 return {
                     employeeId: employee.id,
                     employeeName,
-                    date: effectiveDate || moment().tz('Asia/Karachi').format('YYYY-MM-DD'),
+                    date: effectiveDate || moment().tz(BUSINESS_TIMEZONE).format('YYYY-MM-DD'),
                     hasRecord: false,
                     stillCheckedIn: false,
                     standardShiftMinutes: STANDARD_SHIFT_MINUTES,
@@ -743,13 +745,16 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
         const zkDeviceIdWarning = await this.reconcileZkDeviceUserId(employee, apiResponse.employee_id, contextUser);
 
-        const resolvedDate = apiResponse.filter?.date || effectiveDate || moment().tz('Asia/Karachi').format('YYYY-MM-DD');
-        const record = apiResponse.records.find(r => r.date === resolvedDate) ?? apiResponse.records[0];
+        // This is still the DEVICE's calendar date (Pakistan) at this point - it only
+        // becomes the business-timezone date once we convert the actual punch times
+        // below, since a device-side day can map to a different business-side day.
+        const deviceResolvedDate = apiResponse.filter?.date || effectiveDate || moment().tz(DEVICE_TIMEZONE).format('YYYY-MM-DD');
+        const record = apiResponse.records.find(r => r.date === deviceResolvedDate) ?? apiResponse.records[0];
 
         const baseResponse: IBiometricSyncResponse = {
             employeeId: employee.id,
             employeeName,
-            date: resolvedDate,
+            date: deviceResolvedDate,
             hasRecord: !!record,
             stillCheckedIn: false,
             standardShiftMinutes: STANDARD_SHIFT_MINUTES,
@@ -762,12 +767,35 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             return baseResponse;
         }
 
-        const checkIn24 = parse12HourTimeTo24Hour(record.check_in);
-        const checkOut24 = record.check_out === 'N/A' ? null : parse12HourTimeTo24Hour(record.check_out);
+        const checkIn24Device = parse12HourTimeTo24Hour(record.check_in);
+        const checkOut24Device = record.check_out === 'N/A' ? null : parse12HourTimeTo24Hour(record.check_out);
 
-        if (!checkIn24) {
+        if (!checkIn24Device) {
             return baseResponse;
         }
+
+        // The device keys the whole record under the check-in's calendar date, so a
+        // check-out that's numerically "earlier" than check-in (e.g. 03:00 AM after a
+        // 05:30 PM check-in) actually happened the following device-side day.
+        const checkOutCrossesMidnightOnDevice =
+            checkOut24Device !== null && this.parseTimeToMinutes(checkOut24Device) < this.parseTimeToMinutes(checkIn24Device);
+        const checkOutDeviceDate = checkOutCrossesMidnightOnDevice
+            ? moment.tz(deviceResolvedDate, 'YYYY-MM-DD', DEVICE_TIMEZONE).add(1, 'day').format('YYYY-MM-DD')
+            : deviceResolvedDate;
+
+        // Interpret the raw device times as Pakistan wall-clock, then convert to the
+        // business timezone - the physical punch event doesn't change, only how we
+        // read and store it. The attendance row's date is the *converted* check-in
+        // date going forward (same "check-in's day owns the row" convention as
+        // before, just measured in BUSINESS_TIMEZONE instead of the device's).
+        const checkInBusiness = convertDeviceTimeToBusiness(deviceResolvedDate, checkIn24Device);
+        const checkOutBusiness = checkOut24Device
+            ? convertDeviceTimeToBusiness(checkOutDeviceDate, checkOut24Device)
+            : null;
+
+        const checkIn24 = checkInBusiness.time;
+        const checkOut24 = checkOutBusiness?.time ?? null;
+        const resolvedDate = checkInBusiness.date;
 
         // Persist regardless of clock-in/out completeness — an in-progress check-in is
         // still a real, save-worthy attendance record.
@@ -780,10 +808,11 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         );
 
         if (!checkOut24) {
-            const nowMinutesToday = moment().tz('Asia/Karachi').format('HH:mm:ss');
+            const nowMinutesToday = moment().tz(BUSINESS_TIMEZONE).format('HH:mm:ss');
             const workedSoFar = diffMinutesAcrossMidnight(checkIn24, nowMinutesToday);
             return {
                 ...baseResponse,
+                date: resolvedDate,
                 checkInTime: checkIn24,
                 stillCheckedIn: true,
                 workedMinutes: workedSoFar,

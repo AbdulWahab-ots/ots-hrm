@@ -20,6 +20,7 @@ import { AdminVocationColumns } from "@/utils/Columns/AdminVocationColumns";
 import { getAllVacationsAPI } from "@/services/employeeService";
 import ManagementView from "./ManagementView";
 import CountBadge from "@/components/common/CountBadge";
+import { nowBusiness } from "@/utils/timezone";
 
 const VocationTable = () => {
   const [localData, setLocalData] = useState<Vocation[]>([]);
@@ -188,7 +189,7 @@ const VocationTable = () => {
     // }
 
     // Apply time-based filter (daily, weekly, monthly, yearly)
-    const now = new Date();
+    const now = nowBusiness();
     let startDate: Date | null = null;
     let endDate: Date | null = null;
 

@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import SegmentedTabs from "@/components/common/SegmentedTabs";
 import { fetchAttendanceRecordsForRange } from "@/services/adminServices";
 import { AppDispatch } from "@/store/store";
+import { nowBusiness } from "@/utils/timezone";
 
 type StatItem = {
   label: string;
@@ -49,7 +50,7 @@ const AttendanceOverview: React.FC = () => {
   const loadStats = useCallback(async () => {
     setIsLoading(true);
     try {
-      const now = new Date();
+      const now = nowBusiness();
       const periodStart =
         activeFilter === "monthly"
           ? new Date(now.getFullYear(), now.getMonth(), 1)

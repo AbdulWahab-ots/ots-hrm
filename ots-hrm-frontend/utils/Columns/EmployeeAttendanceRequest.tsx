@@ -3,6 +3,7 @@ import { FiEye } from "react-icons/fi";
 import { MdCheckCircle, MdCancel, MdInfo } from "react-icons/md";
 import CustomCheckbox from "@/components/common/form/CustomCheckbox";
 import { Attendance } from "@/components/employee/attendance-request";
+import { BUSINESS_TIMEZONE } from "@/utils/timezone";
 
 export const EmployeeAttendanceRequest = (
   showCheckbox: boolean
@@ -94,11 +95,11 @@ export const EmployeeAttendanceRequest = (
         const dateValue = info.getValue();
         // Format date as "10 Sep, 2025" (3-letter month)
         const formattedDate = dateValue
-          ? new Date(dateValue).toLocaleDateString("en-PK", {
+          ? new Date(dateValue).toLocaleDateString("en-US", {
             day: "numeric",
             month: "short",
             year: "numeric",
-            timeZone: "Asia/Karachi",
+            timeZone: BUSINESS_TIMEZONE,
           })
           : "N/A";
         return <div className="text-gray-500">{formattedDate}</div>;

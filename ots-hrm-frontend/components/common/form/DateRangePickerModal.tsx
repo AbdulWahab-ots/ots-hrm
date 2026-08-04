@@ -5,6 +5,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Button from "../Button";
+import { nowBusiness } from "@/utils/timezone";
 
 interface DateRange {
   startDate: Date | null;
@@ -38,11 +39,11 @@ export default function DateRangePickerModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    const reference = initialRange?.startDate ?? new Date();
+    const reference = initialRange?.startDate ?? nowBusiness();
     const referenceYear = reference.getFullYear();
     setSelectedYear(referenceYear);
     setSelectedMonth(reference.getMonth());
-    setYearOffset(Math.round((referenceYear - new Date().getFullYear()) / 10));
+    setYearOffset(Math.round((referenceYear - nowBusiness().getFullYear()) / 10));
     setStep(1);
   }, [isOpen, initialRange]);
 
@@ -71,7 +72,7 @@ export default function DateRangePickerModal({
     };
   }, [isOpen, onClose]);
 
-  const startYear = new Date().getFullYear() + yearOffset * 10;
+  const startYear = nowBusiness().getFullYear() + yearOffset * 10;
   const years = Array.from({ length: 15 }, (_, i) => startYear - i);
 
   const handleYearSelect = (year: number) => {

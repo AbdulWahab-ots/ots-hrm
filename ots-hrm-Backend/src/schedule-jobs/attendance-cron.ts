@@ -15,8 +15,9 @@ import {
     VacationStatus
 } from '../models';
 import { EmptyGuid } from '../constants';
+import { BUSINESS_TIMEZONE } from '../utility/timezone-utility';
 
-const TIMEZONE = 'Asia/Karachi';
+const TIMEZONE = BUSINESS_TIMEZONE;
 const DAILY_SCHEDULE         = '0 1 * * *';   // 1:00 AM — create default records
 const ABSENT_MARKING_SCHEDULE = '*/15 * * * *'; // every 15 min — mark absent once the shift has ended
 
@@ -51,8 +52,11 @@ export class AttendanceCronJob {
     start(): void {
         this.dailyJob.start();
         this.absentMarkingJob.start();
-        console.log('✅ Daily attendance job started — runs at 1:00 AM PKT');
-        console.log('✅ Absent marking job started — runs every 15 minutes PKT');
+        // zoneAbbr() reports EST or EDT correctly depending on the actual date (DST-aware),
+        // rather than hardcoding one that goes stale for half the year.
+        const zoneLabel = moment().tz(TIMEZONE).zoneAbbr();
+        console.log(`✅ Daily attendance job started — runs at 1:00 AM ${zoneLabel}`);
+        console.log(`✅ Absent marking job started — runs every 15 minutes ${zoneLabel}`);
     }
 
     stop(): void {
@@ -317,7 +321,7 @@ export class AttendanceCronJob {
         const systemContext = this.systemContext(companyId);
         const now = moment().tz(TIMEZONE);
 
-        // Process each business day by its KNOWN Karachi date string. We deliberately do NOT
+        // Process each business day by its KNOWN business-timezone date string. We deliberately do NOT
         // read the hydrated record.date for the cutoff: rows are stored via new Date('YYYY-MM-DD')
         // and can round-trip a calendar day off in a non-UTC process/DB timezone, which would
         // otherwise mark a freshly-created row absent immediately. Yesterday is included because

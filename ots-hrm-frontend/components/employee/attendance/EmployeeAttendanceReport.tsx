@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import Button from "@/components/common/Button";
 import CustomDropdown from "@/components/common/form/DropDown";
 import CalendarTable from "./Calendar";
+import { nowBusiness } from "@/utils/timezone";
 import {
   MdOutlineArrowBackIos,
   MdOutlineArrowForwardIos,
@@ -201,7 +202,7 @@ const EmployeeAttendanceReport = ({
 
           if (record) {
             let newDay = { ...day };
-            const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+            const isToday = dateStr === format(nowBusiness(), "yyyy-MM-dd");
             if (record.status === "Absent") {
               newDay.status = "absent";
             } else if (record.status === "Pending") {

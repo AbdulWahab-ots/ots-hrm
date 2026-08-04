@@ -371,6 +371,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { RootState, AppDispatch } from "@/store/store";
+import { BUSINESS_TIMEZONE, nowBusiness, todayBusinessISO } from "@/utils/timezone";
 import {
   fetchEmployeeAttendance,
   fetchAttendanceStatus,
@@ -415,8 +416,8 @@ const EmployeeAttendance: React.FC = () => {
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
-    dayjs(),
-    dayjs(),
+    dayjs().tz(BUSINESS_TIMEZONE),
+    dayjs().tz(BUSINESS_TIMEZONE),
   ]);
   const [activeTab, setActiveTab] = useState<Tab>("requests");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -424,8 +425,8 @@ const EmployeeAttendance: React.FC = () => {
     type?: string;
     date?: string;
   } | null>(null);
-  const [currentMonth, setCurrentMonth] = useState<number>(dayjs().month());
-  const [currentYear, setCurrentYear] = useState<number>(dayjs().year());
+  const [currentMonth, setCurrentMonth] = useState<number>(dayjs().tz(BUSINESS_TIMEZONE).month());
+  const [currentYear, setCurrentYear] = useState<number>(dayjs().tz(BUSINESS_TIMEZONE).year());
   const [isPunchedIn, setIsPunchedIn] = useState<boolean>(false);
   const [punchInTime, setPunchInTime] = useState<Date | null>(null);
   const [punchOutTime, setPunchOutTime] = useState<Date | null>(null);
@@ -481,11 +482,13 @@ const EmployeeAttendance: React.FC = () => {
 
   const refetchAttendanceData = () => {
     const startOfMonth = dayjs()
+      .tz(BUSINESS_TIMEZONE)
       .year(currentYear)
       .month(currentMonth)
       .startOf("month")
       .format("YYYY-MM-DD");
     const endOfMonth = dayjs()
+      .tz(BUSINESS_TIMEZONE)
       .year(currentYear)
       .month(currentMonth)
       .endOf("month")
@@ -495,13 +498,7 @@ const EmployeeAttendance: React.FC = () => {
     });
   };
 
-  const getLocalDateISO = () => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
+  const getLocalDateISO = () => todayBusinessISO();
 
   useEffect(() => {
     const currentDate = getLocalDateISO();
@@ -636,8 +633,8 @@ const EmployeeAttendance: React.FC = () => {
   };
 
   const canNavigateNext = () => {
-    const currentDate = dayjs();
-    const selectedDate = dayjs().year(currentYear).month(currentMonth);
+    const currentDate = dayjs().tz(BUSINESS_TIMEZONE);
+    const selectedDate = dayjs().tz(BUSINESS_TIMEZONE).year(currentYear).month(currentMonth);
     return selectedDate.isBefore(currentDate, "month");
   };
 

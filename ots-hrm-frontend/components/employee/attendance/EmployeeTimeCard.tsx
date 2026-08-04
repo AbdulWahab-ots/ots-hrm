@@ -13,6 +13,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store/store";
 import { ProfileResponse } from "@/utils/types";
 import EmployeeIcon from "../../../public/Employee-icon.svg";
+import { nowBusiness } from "@/utils/timezone";
 interface EmployeeCardProps {
   profileData: ProfileResponse | null;
   onPunchUpdate?: () => void;
@@ -45,7 +46,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
   const calculateTimeDifference = (
     startTime: Date,
-    endTime: Date = new Date()
+    endTime: Date = nowBusiness()
   ) => {
     const diff = endTime.getTime() - startTime.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -73,7 +74,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   };
 
   const formatDate = () => {
-    const now = new Date();
+    const now = nowBusiness();
     const dayName = new Intl.DateTimeFormat("en-US", {
       weekday: "long",
     }).format(now);
@@ -124,7 +125,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   useEffect(() => {
     if (isPunchedIn && punchInTime) {
       const interval = setInterval(() => {
-        const now = new Date();
+        const now = nowBusiness();
         const timeDiff = calculateTimeDifference(punchInTime, now);
 
         setElapsedTime(timeDiff);
@@ -140,8 +141,8 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
   }, [isPunchedIn, punchInTime]);
 
   const handleClick = async () => {
-    const now = new Date();
-    const today = new Date();
+    const now = nowBusiness();
+    const today = nowBusiness();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const day = String(today.getDate()).padStart(2, "0");

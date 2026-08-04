@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ChevronLeft, ChevronRight, Video } from "lucide-react";
 import Meeting from "../../../../public/Meeting.svg";
 import Image from "next/image";
+import { nowBusiness } from "@/utils/timezone";
 interface Event {
   date: string; // YYYY-MM-DD
   time: string;
@@ -18,14 +19,14 @@ export default function Calendar() {
   // and the client's hydration pass — don't compute it until after mount, so the initial
   // server/client markup match and React doesn't report a hydration mismatch.
   const [mounted, setMounted] = useState(false);
-  const [today, setToday] = useState(() => new Date());
+  const [today, setToday] = useState(() => nowBusiness());
   const [currentDate, setCurrentDate] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
   const [selectedDate, setSelectedDate] = useState(today);
 
   useEffect(() => {
-    const now = new Date();
+    const now = nowBusiness();
     setToday(now);
     setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1));
     setSelectedDate(now);

@@ -10,6 +10,7 @@ import { UserShiftService } from "./user-shift-service";
 import { EmployeeBenefitService } from "./employee-benefit-service";
 import { generateEmployeeCode } from "../utility/employee-code";
 import { sendWelcomeEmail, sendSetPasswordEmail, sendEmploymentStatusUpdateEmail } from "../utility/mail-utility";
+import { BUSINESS_TIMEZONE } from "../utility/timezone-utility";
 
 @injectable()
 export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmployeeRequest> {
@@ -159,7 +160,7 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
             await this.employeeRepository.commitTransaction(queryRunner);
 
             const effectiveDateStr = new Date(request.effectiveDate).toLocaleDateString('en-US', {
-                year: 'numeric', month: 'long', day: 'numeric',
+                year: 'numeric', month: 'long', day: 'numeric', timeZone: BUSINESS_TIMEZONE,
             });
             const emailSent = await sendEmploymentStatusUpdateEmail(existingEmployee.user.email, {
                 name: `${existingEmployee.user.firstName} ${existingEmployee.user.lastName}`,

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Flame } from "lucide-react";
 import { useAttendanceRange } from "@/hooks/useAttendanceRange";
+import { nowBusiness } from "@/utils/timezone";
 import {
   buildWeeks,
   computeStats,
@@ -65,10 +66,10 @@ interface AttendanceHeatmapProps {
 }
 
 const AttendanceHeatmap: React.FC<AttendanceHeatmapProps> = ({ refreshToken }) => {
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => nowBusiness(), []);
   const [rangeMonths, setRangeMonths] = useState<number>(1);
   // Anchor = the month at the END of the visible range.
-  const [anchor, setAnchor] = useState<Date>(startOfMonth(new Date()));
+  const [anchor, setAnchor] = useState<Date>(startOfMonth(nowBusiness()));
   const [hovered, setHovered] = useState<{ day: DayInfo; rect: DOMRect } | null>(null);
 
   const from = useMemo(

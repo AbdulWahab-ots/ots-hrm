@@ -288,6 +288,7 @@ import { employeeEttendanceRequestColumns } from "@/utils/Columns/employeeEttend
 import { fetchAttendanceRecords } from "@/services/employeeService";
 import { createAttendanceRequestAPI } from "@/services/employeeService";
 import { FaCheckCircle, FaSignOutAlt } from "react-icons/fa";
+import { nowBusiness } from "@/utils/timezone";
 
 export interface EmployeeRecord {
   id: string;
@@ -344,7 +345,7 @@ const EmployeeRecordTable = ({
       try {
         setLocalIsLoading(true);
         dispatch(setIsLoading(true));
-        const today = new Date();
+        const today = nowBusiness();
         const currentYear = today.getFullYear();
 
         // start date = current year ka pehla month (Jan 1)

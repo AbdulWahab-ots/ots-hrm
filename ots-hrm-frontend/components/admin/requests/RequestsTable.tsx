@@ -520,6 +520,7 @@ import ManagementView from "./ManagementView";
 import { fetchAllRequests } from "@/services/adminServices";
 import { GetRequestsPayload } from "@/utils/types";
 import CountBadge from "@/components/common/CountBadge";
+import { nowBusiness, BUSINESS_TIMEZONE } from "@/utils/timezone";
 
 export interface Employee {
   id?: string;
@@ -602,10 +603,10 @@ const RequestTable = () => {
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
-  // Utility function to calculate date range based on activeFilter in PKT
+  // Utility function to calculate date range based on activeFilter in BUSINESS_TIMEZONE
   const getDateRangeForFilter = useCallback(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to midnight PKT
+    const today = nowBusiness();
+    today.setHours(0, 0, 0, 0); // Reset to midnight (business timezone)
 
     let startDate: Date;
     let endDate: Date;
@@ -766,11 +767,11 @@ const RequestTable = () => {
 
             // Format the date as "6 Sep, 2025" (3-letter month)
             const formattedDate = request.date
-              ? new Date(request.date).toLocaleDateString("en-PK", {
+              ? new Date(request.date).toLocaleDateString("en-US", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
-                timeZone: "Asia/Karachi",
+                timeZone: BUSINESS_TIMEZONE,
               })
               : "N/A";
 
