@@ -227,6 +227,38 @@ export const sendEmploymentStatusUpdateEmail = async (
   });
 };
 
+// Send the Late Arrival Notice to the employee themselves. Reuses the same
+// header/body styling as status-update.ejs for visual consistency. Purely a
+// notification email — never touches attendance status or hours calculations.
+export const sendLateArrivalEmployeeEmail = async (
+  to: string,
+  data: { name: string; date: string; time: string; shiftStartTime: string; graceTime: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: 'Late Arrival Notice — OTS HRM',
+    template: 'late-arrival-employee',
+    data,
+    text: `Dear ${data.name},\n\nThis is to inform you that your check-in on ${data.date} was recorded at ${data.time}, after the shift start time of ${data.shiftStartTime} (grace period: ${data.graceTime}).\n\nIf you have any questions regarding this, please contact your HR department.\n\nRegards,\nOrange Tree Systems (OTS) HR Team`,
+  });
+};
+
+// Send the Late Arrival notice to a company admin/HR user about an employee's late
+// check-in. Same underlying event as sendLateArrivalEmployeeEmail, worded for an
+// HR audience instead of the employee.
+export const sendLateArrivalAdminEmail = async (
+  to: string,
+  data: { employeeName: string; date: string; time: string; shiftStartTime: string; graceTime: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: `Late Arrival — ${data.employeeName}`,
+    template: 'late-arrival-admin',
+    data,
+    text: `Dear HR Team,\n\nThis is to inform you that ${data.employeeName} checked in on ${data.date} at ${data.time}, after the shift start time of ${data.shiftStartTime} (grace period: ${data.graceTime}).\n\nRegards,\nOTS HRM System`,
+  });
+};
+
 // Send invite email
 export const sendInviteEmail = async (
   to: string, 

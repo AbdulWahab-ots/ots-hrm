@@ -4,5 +4,6 @@ export enum NotificationType {
     ANNOUNCEMENT = 'ANNOUNCEMENT',                 // a company announcement was posted
     CHECK_IN_REMINDER = 'CHECK_IN_REMINDER',       // reminder to check in for today's attendance
     CHECK_OUT_REMINDER = 'CHECK_OUT_REMINDER',     // reminder to check out for today's attendance
+    LATE_ARRIVAL = 'LATE_ARRIVAL',                 // an employee checked in past the late-arrival alert grace period
     GENERAL = 'GENERAL',                           // anything else
 }

@@ -1,7 +1,7 @@
 import moment from 'moment-timezone';
 
 import { inject, injectable } from "tsyringe";
-import { AttendanceRepository, EmployeeRepository, AttendanceSummaryRepository, VacationRepository, PublicHolidayRepository } from "../dal";
+import { AttendanceRepository, EmployeeRepository, AttendanceSummaryRepository, VacationRepository, PublicHolidayRepository, UserRepository } from "../dal";
 import { IsNull, In, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm";
 import { Attendance, AttendanceSummary } from "../entities";
 import { Actions, AttendanceStatus, FilterMatchModes, FilterOperators, IAttendanceRequest, IAttendanceResponse, ICheckInRequest, ICheckOutRequest, IDataSourceResponse, IFetchRequest, IStatusRequest, ITokenUser, IAttendanceStatsResponse, EmployeeStatus, PresentStatus, DayName, IAttendanceStatusResponse, RequestType, VacationStatus, NotificationType, IBiometricSyncRequest, IBiometricSyncResponse, BiometricAttendanceStatus, IBiometricBulkSyncRequest, IBiometricBulkSyncResponse, IBiometricBulkSyncEmployeeResult } from "../models";
@@ -10,6 +10,7 @@ import { AppError } from "../utility/app-error";
 import { WorkingDaysService } from "./working-days-service";
 import { NotificationService } from "./notification-service";
 import { hasAdminAccess } from "../middlewares/permissions";
+import { DefaultRoles } from "../constants/roles";
 import {
     fetchBiometricAttendance,
     parse12HourTimeTo24Hour,
@@ -19,6 +20,7 @@ import {
     BIOMETRIC_EMPLOYEE_NOT_ENROLLED,
 } from "../utility/biometric-attendance-utility";
 import { BUSINESS_TIMEZONE, DEVICE_TIMEZONE, convertDeviceTimeToBusiness } from "../utility/timezone-utility";
+import { sendLateArrivalEmployeeEmail, sendLateArrivalAdminEmail } from "../utility/mail-utility";
 
 // The company's official shift is fixed at 8.5 hours (8:30 AM – 5:00 PM
 // BUSINESS_TIMEZONE) for the purposes of this integration — independent of whatever
@@ -26,6 +28,13 @@ import { BUSINESS_TIMEZONE, DEVICE_TIMEZONE, convertDeviceTimeToBusiness } from 
 // carry shift context.
 const STANDARD_SHIFT_MINUTES = 8.5 * 60;
 const ON_TIME_TOLERANCE_MINUTES = 5;
+
+// Purely about whether the Late Arrival alert fires - completely separate from
+// ON_TIME_TOLERANCE_MINUTES above, which classifies OVERTIME/ON_TIME/UNDERTIME from
+// actual hours worked. A late-but-within-grace check-in can still end up UNDERTIME
+// (if they leave on time) or ON_TIME (if they make up the minutes by staying later) -
+// the alert grace period must never feed into that hours math.
+const LATE_ARRIVAL_ALERT_GRACE_MINUTES = 15;
 
 // A pending check-in/out reminder for today, surfaced to the admin reminders view.
 export interface IAttendanceReminder {
@@ -46,7 +55,8 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         @inject('AttendanceSummaryRepository') private readonly attendanceSummaryRepository: AttendanceSummaryRepository,
         @inject('VacationRepository') private readonly vacationRepository: VacationRepository,
         @inject('PublicHolidayRepository') private readonly publicHolidayRepository: PublicHolidayRepository,
-        @inject('NotificationService') private readonly notificationService: NotificationService
+        @inject('NotificationService') private readonly notificationService: NotificationService,
+        @inject('UserRepository') private readonly userRepository: UserRepository
     ) {
         super(attendanceRepository, () => new Attendance())
     }
@@ -465,6 +475,17 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
                     { ...contextUser }
                 );
 
+                if (employee.shift?.startTime) {
+                    await this.maybeSendLateArrivalAlert(
+                        employee,
+                        lateMinutes,
+                        request.checkInTime,
+                        moment(request.date).format('YYYY-MM-DD'),
+                        employee.shift.startTime,
+                        contextUser
+                    );
+                }
+
                 return updateResponse.toResponse();
             }
         }
@@ -501,6 +522,17 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         }
 
         let checkInResponse = await this.attendanceRepository.invokeDbOperations(attendanceEntity, Actions.Add);
+
+        if (employee.shift?.startTime) {
+            await this.maybeSendLateArrivalAlert(
+                employee,
+                lateMinutes,
+                request.checkInTime,
+                moment(request.date).format('YYYY-MM-DD'),
+                employee.shift.startTime,
+                contextUser
+            );
+        }
 
         return checkInResponse.toResponse();
     }
@@ -620,7 +652,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
     ): Promise<IBiometricBulkSyncResponse> {
         const employees = await this.employeeRepository.where({
             where: { companyId, active: true, ...employeeWhereExtra },
-            relations: { user: true },
+            relations: { user: true, shift: true },
         });
 
         const todayStr = moment().tz(BUSINESS_TIMEZONE).format('YYYY-MM-DD');
@@ -799,13 +831,30 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
         // Persist regardless of clock-in/out completeness — an in-progress check-in is
         // still a real, save-worthy attendance record.
-        const { changed } = await this.upsertBiometricAttendance(
+        const { changed, checkInChanged } = await this.upsertBiometricAttendance(
             contextUser,
             employee,
             resolvedDate,
             checkIn24,
             checkOut24
         );
+
+        // Gated on checkInChanged (not the broader `changed`) so a later check-out on
+        // the same day's already-recorded check-in doesn't re-fire the alert - it only
+        // fires the first time this check-in value is seen. Computed independently of
+        // upsertBiometricAttendance's own fields, which never touch lateMinutes/LATE
+        // status for biometric records - this alert has zero effect on that data.
+        if (checkInChanged && employee.shift?.startTime) {
+            const lateMinutes = this.calculateLateness(checkIn24, employee.shift.startTime);
+            await this.maybeSendLateArrivalAlert(
+                employee,
+                lateMinutes,
+                checkIn24,
+                resolvedDate,
+                employee.shift.startTime,
+                contextUser
+            );
+        }
 
         if (!checkOut24) {
             const nowMinutesToday = moment().tz(BUSINESS_TIMEZONE).format('HH:mm:ss');
@@ -896,11 +945,11 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         const employee = employeeId
             ? await this.employeeRepository.firstOrDefault({
                 where: { id: employeeId, companyId: contextUser.companyId },
-                relations: { user: true },
+                relations: { user: true, shift: true },
             })
             : await this.employeeRepository.firstOrDefault({
                 where: { userId: contextUser.id, companyId: contextUser.companyId },
-                relations: { user: true },
+                relations: { user: true, shift: true },
             });
 
         if (!employee || !employee.user) {
@@ -915,7 +964,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         date: string,
         checkIn24: string,
         checkOut24: string | null
-    ): Promise<{ attendance: Attendance; changed: boolean }> {
+    ): Promise<{ attendance: Attendance; changed: boolean; checkInChanged: boolean }> {
         const existing = await this.attendanceRepository.firstOrDefault({
             where: { userId: employee.userId, date: date as any },
         });
@@ -923,9 +972,9 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         // Only meaningful for the automatic sync job: a new row, or a check-in/check-out
         // time that differs from what we already had, is worth pushing to connected
         // clients. Re-persisting identical data every 30s should stay silent.
-        const changed = !existing
-            || existing.checkInTime !== checkIn24
-            || (existing.checkOutTime ?? null) !== checkOut24;
+        const checkInChanged = !existing || existing.checkInTime !== checkIn24;
+        const changed = checkInChanged
+            || (existing?.checkOutTime ?? null) !== checkOut24;
 
         const workedMinutes = checkOut24 ? diffMinutesAcrossMidnight(checkIn24, checkOut24) : 0;
         const lockWorkingHours = Math.round((workedMinutes / 60) * 100) / 100;
@@ -946,7 +995,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
         if (existing) {
             const attendance = await this.attendanceRepository.partialUpdate(existing.id, fields, contextUser);
-            return { attendance, changed };
+            return { attendance, changed, checkInChanged };
         }
 
         // toEntity() maps IAttendanceRequest.workingHours -> entity.lockWorkingHours and
@@ -972,7 +1021,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         attendanceEntity.earlyLeaveMinutes = fields.earlyLeaveMinutes;
 
         const attendance = await this.attendanceRepository.invokeDbOperations(attendanceEntity, Actions.Add);
-        return { attendance, changed };
+        return { attendance, changed, checkInChanged };
     }
 
     public async get(contextUser?: ITokenUser, fetchRequest?: IFetchRequest<IAttendanceRequest>): Promise<IDataSourceResponse<IAttendanceResponse>> {
@@ -1149,11 +1198,101 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         try {
             const checkInMinutes = this.parseTimeToMinutes(checkInTime);
             const shiftStartMinutes = this.parseTimeToMinutes(shiftStartTime);
-            
+
             return Math.max(0, checkInMinutes - shiftStartMinutes);
         } catch (error) {
             console.warn('Error calculating lateness:', error);
             return 0;
+        }
+    }
+
+    // Fires the Late Arrival alert (in-app + best-effort email, to both the employee
+    // and the company's admins) once lateMinutes clears LATE_ARRIVAL_ALERT_GRACE_MINUTES.
+    // This is purely a notification trigger - it must never write to the Attendance
+    // entity or feed into AttendanceStatus/OT-UT classification, which stay driven
+    // entirely by ON_TIME_TOLERANCE_MINUTES and actual hours worked. Best-effort:
+    // any failure here is swallowed so it can never block a check-in or sync tick.
+    private async maybeSendLateArrivalAlert(
+        employee: { userId: string; user?: { firstName?: string; lastName?: string; userName?: string; email?: string } },
+        lateMinutes: number,
+        checkInTime: string,
+        date: string,
+        shiftStartTime: string,
+        contextUser: ITokenUser
+    ): Promise<void> {
+        if (lateMinutes <= LATE_ARRIVAL_ALERT_GRACE_MINUTES) return;
+
+        try {
+            const employeeName = `${employee.user?.firstName ?? ''} ${employee.user?.lastName ?? ''}`.trim()
+                || employee.user?.userName
+                || 'Employee';
+            const lateLabel = formatMinutesAsHoursAndMinutes(lateMinutes);
+
+            // Formatted purely for the email/notification copy — never fed back into
+            // any attendance/hours calculation.
+            const formattedDate = moment.tz(date, 'YYYY-MM-DD', BUSINESS_TIMEZONE).format('D MMM YYYY');
+            const formattedTime = moment.tz(`${date} ${checkInTime}`, 'YYYY-MM-DD HH:mm:ss', BUSINESS_TIMEZONE).format('h:mm A');
+            const formattedShiftStart = moment.tz(shiftStartTime, 'HH:mm:ss', BUSINESS_TIMEZONE).format('h:mm A');
+            const formattedGraceTime = moment.tz(shiftStartTime, 'HH:mm:ss', BUSINESS_TIMEZONE)
+                .add(LATE_ARRIVAL_ALERT_GRACE_MINUTES, 'minutes')
+                .format('h:mm A');
+
+            // In-app notifications only here — skipEmail avoids duplicating the
+            // dedicated, purpose-built emails sent below with their own template/copy.
+            await this.notificationService.createNotification(
+                employee.userId,
+                {
+                    title: 'Late arrival',
+                    message: `You checked in ${lateLabel} late today.`,
+                    type: NotificationType.LATE_ARRIVAL,
+                    skipEmail: true,
+                },
+                contextUser
+            );
+
+            if (employee.user?.email) {
+                await sendLateArrivalEmployeeEmail(employee.user.email, {
+                    name: employeeName,
+                    date: formattedDate,
+                    time: formattedTime,
+                    shiftStartTime: formattedShiftStart,
+                    graceTime: formattedGraceTime,
+                });
+            }
+
+            const companyUsers = await this.userRepository.where({
+                where: { companyId: contextUser.companyId, active: true, deleted: false },
+                relations: { role: true },
+            });
+            const admins = companyUsers.filter((u: any) => u.id !== employee.userId
+                && (u.role?.code === DefaultRoles.Admin || u.role?.code === DefaultRoles.SuperAdmin));
+
+            if (admins.length) {
+                await this.notificationService.createForUsers(
+                    admins.map((u: any) => u.id),
+                    {
+                        title: 'Late arrival',
+                        message: `${employeeName} checked in ${lateLabel} late today.`,
+                        type: NotificationType.LATE_ARRIVAL,
+                        skipEmail: true,
+                    },
+                    contextUser
+                );
+
+                await Promise.allSettled(
+                    admins
+                        .filter((u: any) => !!u.email)
+                        .map((u: any) => sendLateArrivalAdminEmail(u.email, {
+                            employeeName,
+                            date: formattedDate,
+                            time: formattedTime,
+                            shiftStartTime: formattedShiftStart,
+                            graceTime: formattedGraceTime,
+                        }))
+                );
+            }
+        } catch (error) {
+            console.warn('Failed to send late-arrival alert:', error);
         }
     }
 

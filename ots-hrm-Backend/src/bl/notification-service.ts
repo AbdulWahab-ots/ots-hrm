@@ -12,6 +12,10 @@ export interface INotificationPayload {
     title: string;
     message: string;
     type?: NotificationType;
+    // Skip the automatic generic (title/message) notification email — set by callers
+    // that send their own dedicated, purpose-built email template instead (e.g. the
+    // Late Arrival alert), so the recipient doesn't get two emails for one event.
+    skipEmail?: boolean;
 }
 
 @injectable()
@@ -44,14 +48,16 @@ export class NotificationService extends Service<Notification, INotificationResp
         );
 
         // Best-effort email — look up the recipient's address; skip silently if missing.
-        try {
-            const user = await this.userRepository.findOneById(recipientUserId);
-            if (user?.email) {
-                const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.userName || "there";
-                await sendNotificationEmail(user.email, { name, title: payload.title, message: payload.message });
+        if (!payload.skipEmail) {
+            try {
+                const user = await this.userRepository.findOneById(recipientUserId);
+                if (user?.email) {
+                    const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.userName || "there";
+                    await sendNotificationEmail(user.email, { name, title: payload.title, message: payload.message });
+                }
+            } catch {
+                // Notification is already saved; email is non-critical.
             }
-        } catch {
-            // Notification is already saved; email is non-critical.
         }
 
         return created;
