@@ -575,12 +575,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         return this.performBiometricSync(employee, request.date, contextUser);
     }
 
-    // Admin-only: syncs every active employee in the company for one date (default:
-    // today). Each employee is attempted independently — one employee's failure (not
-    // enrolled on the device, a transient error, whatever) never stops the rest of the
-    // batch. Sequential on purpose: the external API is a single ngrok tunnel of unknown
-    // capacity, and hammering it concurrently for a whole company risks rate-limiting or
-    // timing out every request instead of just the flaky ones.
+    // Admin-only: syncs every active employee in the company for one date (default: today).
     public async syncAllEmployeesFromBiometricDevice(
         contextUser: ITokenUser,
         request: IBiometricBulkSyncRequest
@@ -589,13 +584,45 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             throw new AppError('Forbidden. Admin access required to sync all employees\' attendance.', '403');
         }
 
+        return this.syncEmployeesForCompany(contextUser.companyId, request.date, contextUser);
+    }
+
+    // Used by the automatic 30s sync job (schedule-jobs/attendance-sync-cron.ts). Narrowed
+    // to employees with a known zkDeviceUserId - i.e. ones a manual sync has already
+    // confirmed exist on the device - so the background job doesn't spend a request every
+    // tick on employees who will only ever come back NOT_ENROLLED. A brand-new employee's
+    // first-ever sync (which populates zkDeviceUserId via reconcileZkDeviceUserId) still
+    // needs one manual "Refresh"/"Sync All" click; this job picks them up automatically
+    // from then on.
+    public async syncAutoEnrolledEmployeesForCompany(
+        companyId: string,
+        systemContext: ITokenUser
+    ): Promise<IBiometricBulkSyncResponse> {
+        return this.syncEmployeesForCompany(companyId, undefined, systemContext, {
+            zkDeviceUserId: Not(IsNull())
+        });
+    }
+
+    // Admin-only entry point (syncAllEmployeesFromBiometricDevice) and the automatic sync
+    // job (syncAutoEnrolledEmployeesForCompany) both funnel through here. Each employee is
+    // attempted independently — one employee's failure (not enrolled on the device, a
+    // transient error, whatever) never stops the rest of the batch. Sequential on purpose:
+    // the external API is a single ngrok tunnel of unknown capacity, and hammering it
+    // concurrently for a whole company risks rate-limiting or timing out every request
+    // instead of just the flaky ones.
+    private async syncEmployeesForCompany(
+        companyId: string,
+        date: string | undefined,
+        contextUser: ITokenUser,
+        employeeWhereExtra: Record<string, any> = {}
+    ): Promise<IBiometricBulkSyncResponse> {
         const employees = await this.employeeRepository.where({
-            where: { companyId: contextUser.companyId, active: true },
+            where: { companyId, active: true, ...employeeWhereExtra },
             relations: { user: true },
         });
 
         const todayStr = moment().tz('Asia/Karachi').format('YYYY-MM-DD');
-        const resolvedDate = request.date || todayStr;
+        const resolvedDate = date || todayStr;
         // Only "today" (explicit or defaulted) should get the per-employee overnight
         // check — an explicit historical date is honored literally for everyone, same
         // as the single-employee flow. Passing undefined here (rather than resolvedDate)
@@ -618,6 +645,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
                 );
                 results.push({
                     employeeId: employee.id,
+                    userId: employee.userId,
                     employeeName,
                     outcome: sync.attendanceStatus === 'NOT_ENROLLED'
                         ? 'not_enrolled'
@@ -630,6 +658,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             } catch (error) {
                 results.push({
                     employeeId: employee.id,
+                    userId: employee.userId,
                     employeeName,
                     outcome: 'failed',
                     message: error instanceof AppError ? error.message : 'Unexpected error while syncing this employee.',
@@ -742,7 +771,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
 
         // Persist regardless of clock-in/out completeness — an in-progress check-in is
         // still a real, save-worthy attendance record.
-        await this.upsertBiometricAttendance(
+        const { changed } = await this.upsertBiometricAttendance(
             contextUser,
             employee,
             resolvedDate,
@@ -761,6 +790,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
                 workedHoursLabel: formatMinutesAsHoursAndMinutes(workedSoFar),
                 attendanceStatus: 'IN_PROGRESS',
                 statusMessage: `Still checked in — ${formatMinutesAsHoursAndMinutes(workedSoFar)} so far.`,
+                changed,
             };
         }
 
@@ -789,6 +819,7 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
             workedHoursLabel: formatMinutesAsHoursAndMinutes(workedMinutes),
             attendanceStatus,
             statusMessage,
+            changed,
         };
     }
 
@@ -855,10 +886,17 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         date: string,
         checkIn24: string,
         checkOut24: string | null
-    ): Promise<Attendance> {
+    ): Promise<{ attendance: Attendance; changed: boolean }> {
         const existing = await this.attendanceRepository.firstOrDefault({
             where: { userId: employee.userId, date: date as any },
         });
+
+        // Only meaningful for the automatic sync job: a new row, or a check-in/check-out
+        // time that differs from what we already had, is worth pushing to connected
+        // clients. Re-persisting identical data every 30s should stay silent.
+        const changed = !existing
+            || existing.checkInTime !== checkIn24
+            || (existing.checkOutTime ?? null) !== checkOut24;
 
         const workedMinutes = checkOut24 ? diffMinutesAcrossMidnight(checkIn24, checkOut24) : 0;
         const lockWorkingHours = Math.round((workedMinutes / 60) * 100) / 100;
@@ -878,7 +916,8 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         };
 
         if (existing) {
-            return this.attendanceRepository.partialUpdate(existing.id, fields, contextUser);
+            const attendance = await this.attendanceRepository.partialUpdate(existing.id, fields, contextUser);
+            return { attendance, changed };
         }
 
         // toEntity() maps IAttendanceRequest.workingHours -> entity.lockWorkingHours and
@@ -903,7 +942,8 @@ export class AttendanceService extends Service<Attendance, IAttendanceResponse, 
         attendanceEntity.lockWorkingHours = fields.lockWorkingHours;
         attendanceEntity.earlyLeaveMinutes = fields.earlyLeaveMinutes;
 
-        return this.attendanceRepository.invokeDbOperations(attendanceEntity, Actions.Add);
+        const attendance = await this.attendanceRepository.invokeDbOperations(attendanceEntity, Actions.Add);
+        return { attendance, changed };
     }
 
     public async get(contextUser?: ITokenUser, fetchRequest?: IFetchRequest<IAttendanceRequest>): Promise<IDataSourceResponse<IAttendanceResponse>> {

@@ -8,21 +8,16 @@ import { logger } from "../middlewares";
 import { ExtendedRequest } from "../models";
 import { ActivityLog } from "../entities";
 import { registerControllers } from "../controllers/register/controllers-register";
-import { AppResponse } from "./app-response"; 
+import { AppResponse } from "./app-response";
+import { getAllowedOrigins } from "./cors-utility";
 
 export const fastifyRegisters = async (fastify: FastifyInstance) => {
     // Restrict CORS to an explicit allowlist. With credentials enabled, reflecting
     // arbitrary origins (origin:true) lets any website make authenticated cross-origin
     // calls, so the allowed origins come from env (CORS_ORIGINS, comma-separated) and
-    // fall back to FRONTEND_URL / the local dev frontend.
-    const allowedOrigins = (
-        process.env.CORS_ORIGINS ||
-        process.env.FRONTEND_URL ||
-        'http://localhost:3000'
-    )
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean);
+    // fall back to FRONTEND_URL / the local dev frontend. Shared with the Socket.IO
+    // server (socket/socket-io.ts) so the two allowlists never drift apart.
+    const allowedOrigins = getAllowedOrigins();
 
     await fastify.register(cors, {
         origin: allowedOrigins,

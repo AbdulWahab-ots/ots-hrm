@@ -25,7 +25,7 @@ app.register(cookie, {
 })
 app.register(fastifymultipart);
 app.setErrorHandler(errorHandler);
-initializeSocket(app.server);
+const io = initializeSocket(app.server);
 fastifyRegisters(app);
 
 
@@ -73,7 +73,7 @@ app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
   log(`📊 Health check available at ${address}/health`);
 
   // Start scheduled jobs after server and DI container are fully initialized
-  initScheduleJobs(container);
+  initScheduleJobs(container, io);
 });
 
 process.on('unhandledRejection', (reason, promise) => {

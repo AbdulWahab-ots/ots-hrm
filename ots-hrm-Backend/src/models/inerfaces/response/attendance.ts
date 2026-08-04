@@ -68,6 +68,11 @@ export interface IBiometricSyncResponse {
     // Non-blocking: the device's employee_id didn't match what we had on file for this
     // employee (name-matching may have hit a different person). Admin should verify.
     zkDeviceIdWarning?: string;
+    // True if this sync actually created/changed the Attendance row (new check-in,
+    // new check-out, etc). Used by the automatic sync job to decide whether an
+    // employee's update is worth pushing over Socket.IO - absent on responses that
+    // never reached a persist (NOT_ENROLLED, NO_RECORD, no check-in yet parsed).
+    changed?: boolean;
 }
 
 // One employee's outcome within a company-wide bulk sync. `failed` is reserved for
@@ -75,6 +80,9 @@ export interface IBiometricSyncResponse {
 // for this employee (NOT_ENROLLED / NO_RECORD) is not a failure, it's a normal result.
 export interface IBiometricBulkSyncEmployeeResult {
     employeeId: string;
+    // The linked User's id (not employeeId) - needed to route a Socket.IO update to
+    // this specific employee's own room (see socket/socket-io.ts's employeeAttendanceRoom).
+    userId: string;
     employeeName: string;
     outcome: 'synced' | 'no_record' | 'not_enrolled' | 'failed';
     message: string;

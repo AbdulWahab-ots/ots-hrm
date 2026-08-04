@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Flame } from "lucide-react";
 import { useAttendanceRange } from "@/hooks/useAttendanceRange";
 import {
@@ -58,7 +58,13 @@ const statusText = (day: DayInfo): string => {
   }
 };
 
-const AttendanceHeatmap: React.FC = () => {
+interface AttendanceHeatmapProps {
+  // Bumped by the parent (e.g. after a live Socket.IO attendance update) to force a
+  // re-fetch of the currently-visible range without changing month/range selection.
+  refreshToken?: number | string;
+}
+
+const AttendanceHeatmap: React.FC<AttendanceHeatmapProps> = ({ refreshToken }) => {
   const today = useMemo(() => new Date(), []);
   const [rangeMonths, setRangeMonths] = useState<number>(1);
   // Anchor = the month at the END of the visible range.
@@ -71,7 +77,13 @@ const AttendanceHeatmap: React.FC = () => {
   );
   const to = useMemo(() => endOfMonth(anchor), [anchor]);
 
-  const { records, isLoading } = useAttendanceRange(ymd(from), ymd(to));
+  const { records, isLoading, refetch } = useAttendanceRange(ymd(from), ymd(to));
+
+  useEffect(() => {
+    if (refreshToken !== undefined) refetch();
+    // Only re-run when refreshToken itself changes - refetch is stable per from/to.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshToken]);
 
   const weeks = useMemo(
     () => buildWeeks(from, to, records, today),

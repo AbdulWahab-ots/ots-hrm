@@ -27,6 +27,7 @@ import { GetAttendancePayload, Attendance, Department } from "@/utils/types";
 import { setIsLoading } from "@/store/features/global/globalSlice";
 import { toast } from "sonner";
 import CountBadge from "@/components/common/CountBadge";
+import { useAttendanceSocket } from "@/hooks/useAttendanceSocket";
 
 const AttendanceTable = () => {
   const [localData, setLocalData] = useState<Attendance[]>([]);
@@ -344,6 +345,14 @@ const AttendanceTable = () => {
     sortConfig,
     fetchAttendance,
   ]);
+
+  // Live push from the backend's automatic biometric sync job (every 30s) - an
+  // admin's socket joins the company-wide admin room (see socket/socket-io.ts), so
+  // this fires for any employee's change. Re-run the current query as-is (same
+  // page/filters/sort) rather than resetting the admin's place in the table.
+  useAttendanceSocket(() => {
+    fetchAttendance(currentPage, buildFilters());
+  });
 
   const handleOpenDateModal = () => setIsDateModalOpen(true);
   const handleCloseDateModal = () => setIsDateModalOpen(false);

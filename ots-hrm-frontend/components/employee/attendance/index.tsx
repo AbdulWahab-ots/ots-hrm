@@ -391,6 +391,7 @@ import { ProfileResponse } from "@/utils/types";
 import EmployeeCard from "../dashboard/components/EmployeeCard";
 import SegmentedTabs from "@/components/common/SegmentedTabs";
 import AttendanceHeatmap from "./AttendanceHeatmap";
+import { useAttendanceSocket } from "@/hooks/useAttendanceSocket";
 
 type Tab = "requests" | "records";
 
@@ -640,6 +641,15 @@ const EmployeeAttendance: React.FC = () => {
     return selectedDate.isBefore(currentDate, "month");
   };
 
+  // Live push from the backend's automatic biometric sync job (every 30s) - the
+  // server only ever sends this socket *this employee's own* updates (see
+  // socket/socket-io.ts's employeeAttendanceRoom), so no need to filter by userId
+  // here, but the check is cheap insurance if that ever changes.
+  useAttendanceSocket((event) => {
+    if (profileData?.result?.id && event.userId !== profileData.result.id) return;
+    handlePunchUpdate();
+  });
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 items-stretch xl:grid-cols-5">
@@ -662,7 +672,7 @@ const EmployeeAttendance: React.FC = () => {
 
       {/* Attendance heatmap — GitHub-style, full width, derived from the same
           attendance source as the records table (no new endpoint). */}
-      <AttendanceHeatmap />
+      <AttendanceHeatmap refreshToken={refreshToken} />
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center justify-between">
         <SegmentedTabs
