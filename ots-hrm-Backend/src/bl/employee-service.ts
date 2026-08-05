@@ -1,5 +1,5 @@
 import { inject, injectable } from "tsyringe";
-import { EmployeeRepository, RoleRepository, UserRepository, AttendanceRepository, VacationRepository, PayrollRepository } from "../dal";
+import { EmployeeRepository, RoleRepository, UserRepository, AttendanceRepository, VacationRepository, PayrollRepository, CompanyRepository } from "../dal";
 import { Employee, Role, User, EmployeeBenefit } from "../entities";
 import { Actions, IEmployeeRequest, IEmployeeResponse, IEmployeeSetupWarning, IEmployeeStatsResponse, ITokenUser, EmployeeStatus } from "../models";
 import { Service } from "./generics/service";
@@ -8,7 +8,7 @@ import { Not } from "typeorm";
 import { AppError } from "../utility/app-error";
 import { UserShiftService } from "./user-shift-service";
 import { EmployeeBenefitService } from "./employee-benefit-service";
-import { generateEmployeeCode } from "../utility/employee-code";
+import { reserveNextEmployeeCode, syncEmployeeCodeCounter, previewNextEmployeeCode } from "../utility/employee-code";
 import { sendWelcomeEmail, sendSetPasswordEmail, sendEmploymentStatusUpdateEmail } from "../utility/mail-utility";
 import { BUSINESS_TIMEZONE } from "../utility/timezone-utility";
 
@@ -22,7 +22,8 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         @inject('EmployeeBenefitService') private readonly employeeBenefitService: EmployeeBenefitService,
         @inject('AttendanceRepository') private readonly attendanceRepository: AttendanceRepository,
         @inject('VacationRepository') private readonly vacationRepository: VacationRepository,
-        @inject('PayrollRepository') private readonly payrollRepository: PayrollRepository
+        @inject('PayrollRepository') private readonly payrollRepository: PayrollRepository,
+        @inject('CompanyRepository') private readonly companyRepository: CompanyRepository
     ) {
         super(employeeRepository, () => new Employee())
     }
@@ -185,6 +186,12 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         }
     }
 
+    // Read-only suggestion for the Create Employee form's Employee Code field - the
+    // admin can freely edit it before submitting. Does not reserve/consume a number.
+    public async getNextEmployeeCode(contextUser: ITokenUser): Promise<string> {
+        return previewNextEmployeeCode(this.companyRepository, contextUser.companyId);
+    }
+
     public async add(entityRequest: IEmployeeRequest, contextUser: ITokenUser): Promise<IEmployeeResponse> {
         let { user: userRequest, shiftId, benefits, ...employeeRequest } = entityRequest;
 
@@ -192,8 +199,14 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
             throw new AppError("Password is required for creating a user.", "400");
         }
 
-        if (!employeeRequest.employeeCode) {
-            employeeRequest.employeeCode = await generateEmployeeCode(this.employeeRepository, contextUser.companyId);
+        // If the admin left the (pre-filled, editable) suggestion untouched, or omitted
+        // it entirely, the code is still explicitly provided in the normal case since the
+        // frontend always sends the suggested value - `wasProvided` distinguishes that
+        // from a genuinely-omitted code so the counter is only atomically reserved (vs.
+        // synced/bumped) when there's nothing for the caller to have provided at all.
+        const wasProvided = !!employeeRequest.employeeCode;
+        if (!wasProvided) {
+            employeeRequest.employeeCode = await reserveNextEmployeeCode(this.companyRepository, contextUser.companyId);
         }
 
         // Ensure the company's employee role exists. Roles are company-scoped, so the lookup
@@ -248,6 +261,19 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         } catch (error) {
             await this.employeeRepository.rollbackTransaction(queryRunner);
             throw error;
+        }
+
+        // The employee code was explicitly provided (a manual override, or the
+        // auto-suggestion sent back unchanged) rather than reserved just now - move the
+        // counter up to match if it's higher, so a manually-typed jump-ahead code is
+        // correctly reflected in the next suggestion. Best-effort: the employee is
+        // already committed, so a failure here shouldn't surface as a creation failure.
+        if (wasProvided) {
+            try {
+                await syncEmployeeCodeCounter(this.companyRepository, contextUser.companyId, employeeCreated.employeeCode);
+            } catch (error) {
+                console.warn('Failed to sync employee code counter:', error);
+            }
         }
 
         // Deferred: benefits and shift are best-effort add-ons. A failure here does not roll back
@@ -694,6 +720,18 @@ export class EmployeeService extends Service<Employee, IEmployeeResponse, IEmplo
         } catch (error) {
             await this.employeeRepository.rollbackTransaction(queryRunner);
             throw error;
+        }
+
+        // Keep the Employee Code counter in sync with a manually-provided code here too
+        // (onboarding has its own uniqueness checks above but never reserves/bumps the
+        // counter), so a jump-ahead code entered during onboarding is still correctly
+        // reflected in the Create Employee form's next suggestion. Best-effort.
+        if (!existingEmployee && employeeRequest.employeeCode) {
+            try {
+                await syncEmployeeCodeCounter(this.companyRepository, contextUser.companyId, employeeEntity.employeeCode);
+            } catch (error) {
+                console.warn('Failed to sync employee code counter:', error);
+            }
         }
 
         // Deferred: shift assignment is best-effort and does not roll back onboarding.

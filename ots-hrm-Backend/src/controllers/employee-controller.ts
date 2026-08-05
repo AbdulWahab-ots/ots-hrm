@@ -67,6 +67,11 @@ export class EmployeeController extends ControllerBase {
             },
             {
                 method: 'GET',
+                path: `next-code`,
+                handler: this.getNextEmployeeCode as RouteHandlerMethod
+            },
+            {
+                method: 'GET',
                 path: `with-shifts`,
                 handler: this.getEmployeesWithShifts as RouteHandlerMethod
             },
@@ -183,6 +188,19 @@ export class EmployeeController extends ControllerBase {
                 AppResponse.success(
                     "Fetched employee stats successfully",
                     await this.employeeService.getStats(request.user)
+                )
+            );
+        }
+    }
+
+    private getNextEmployeeCode = async (req: FastifyRequest, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            res.send(
+                AppResponse.success(
+                    "Fetched next employee code successfully",
+                    { code: await this.employeeService.getNextEmployeeCode(request.user) }
                 )
             );
         }

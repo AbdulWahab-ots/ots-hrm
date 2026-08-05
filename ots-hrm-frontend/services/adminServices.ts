@@ -1255,6 +1255,14 @@ export const sendSetPasswordEmailAPI = async (
   return !!response;
 };
 
+// Read-only suggestion for the Create Employee form's Employee Code field - does not
+// reserve/consume a number, so repeatedly loading the form never creates gaps.
+export const fetchNextEmployeeCode = async (
+  dispatch: AppDispatch
+): Promise<any> => {
+  return apiHandler(dispatch, "get", "/employee/next-code", {});
+};
+
 export const createEmployeeAPI = async (
   dispatch: AppDispatch,
   payload: EmployeePayload

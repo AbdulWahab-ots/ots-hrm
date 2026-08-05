@@ -43,6 +43,14 @@ export class Company extends EntityBase implements IToResponseBase<Company, ICom
     @Column({ type: 'boolean', default: false })
     isSystemCompany!: boolean;
 
+    // Per-company counter backing the auto-suggested Employee Code (e.g. "EMP-004").
+    // Only ever moves forward (see CompanyRepository.reserveNextEmployeeCodeNumber /
+    // bumpEmployeeCodeCounterIfHigher) so a resigned/deleted employee's code number is
+    // never reissued. Not exposed via toResponse() - it's an internal implementation
+    // detail of employee-code.ts, not a company-profile field.
+    @Column({ type: 'int', default: 0 })
+    lastEmployeeCodeNumber!: number;
+
     // Relationship to get all users of this company
     @OneToMany(() => User, user => user.company, { eager: false })
     users?: User[];

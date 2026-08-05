@@ -4,7 +4,7 @@ import { Actions, FilterMatchModes, FilterOperators, IForgotPasswordRequest, ILo
 import { Company, Role, User, Verification, Invite, Employee, EmployeeBenefit } from "../entities";
 import { randomUUID, randomInt } from "crypto";
 import { compareHash, encrypt, signJwt, verifyInviteToken, verifySetPasswordToken } from "../utility";
-import { generateEmployeeCode } from "../utility/employee-code";
+import { reserveNextEmployeeCode } from "../utility/employee-code";
 import { FastifyError } from 'fastify'
 import { EmptyGuid, DefaultRoles } from "../constants";
 import { ILike, QueryRunner } from "typeorm";
@@ -488,7 +488,7 @@ export class AuthService {
             }
 
             // Auto-generate employee code via the shared, collision-safe generator
-            const autoEmployeeCode = await generateEmployeeCode(this.employeeRepository, invite.companyId);
+            const autoEmployeeCode = await reserveNextEmployeeCode(this.companyRepository, invite.companyId);
 
             // Create employee record
             const employee = new Employee().toEntity(

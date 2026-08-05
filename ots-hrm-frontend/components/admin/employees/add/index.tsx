@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
-import { Formik, Form, FormikHelpers } from "formik";
+import { Formik, Form, FormikHelpers, FormikProps } from "formik";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import Button from "@/components/common/Button";
@@ -24,6 +24,7 @@ import {
   fetchAllShifts,
   fetchAllBenefits,
   inviteUserAPI,
+  fetchNextEmployeeCode,
 } from "@/services/adminServices";
 import Image from "next/image";
 import ATMCard from "../../../../public/ATMCard.svg";
@@ -94,6 +95,7 @@ const CreateEmployee = ({
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const formikRef = useRef<FormikProps<EmployeePayload>>(null);
 
   useEffect(() => {
     fetchAllDepartments(dispatch);
@@ -101,6 +103,22 @@ const CreateEmployee = ({
     fetchAllShifts(dispatch);
     fetchAllBenefits(dispatch);
   }, [dispatch]);
+
+  // Pre-fill (not lock) the Employee Code with the next suggested value - the admin can
+  // still freely edit it before submitting. Only for new employees; editing an existing
+  // one should never touch their already-assigned code. Guarded on the field still being
+  // empty in case the admin somehow typed something in the brief window before this
+  // request resolves.
+  useEffect(() => {
+    if (isEdit) return;
+    fetchNextEmployeeCode(dispatch).then((response) => {
+      const code = response?.result?.code;
+      if (code && !formikRef.current?.values.employeeCode) {
+        formikRef.current?.setFieldValue("employeeCode", code);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, isEdit]);
 
   useEffect(() => {
     if (initialValues?.benefitId) {
@@ -273,6 +291,7 @@ const CreateEmployee = ({
           </div>
 
           <Formik
+            innerRef={formikRef}
             initialValues={safeInitialValues}
             validationSchema={
               (isEdit ? EmployeeEditValidationSchema : EmployeeValidationSchema)[
