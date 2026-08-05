@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -10,7 +10,12 @@ import {
   ChartData,
   ChartOptions,
 } from "chart.js";
+import { useDispatch } from "react-redux";
+import { format } from "date-fns";
 import SegmentedTabs from "@/components/common/SegmentedTabs";
+import { AppDispatch } from "@/store/store";
+import { fetchAttendanceStatsForRange } from "@/services/adminServices";
+import { nowBusiness } from "@/utils/timezone";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Legend);
 
@@ -28,56 +33,88 @@ const AttendanceChart: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<
     "daily" | "weekly" | "monthly" | "yearly"
   >("daily");
+  const [stats, setStats] = useState({
+    totalPresent: 0,
+    totalLate: 0,
+    totalAbsent: 0,
+    totalOnLeave: 0,
+    totalRecords: 0,
+    attendancePercentage: 0,
+  });
+  const dispatch = useDispatch<AppDispatch>();
 
-  // Define data for different filters
-  const filterData = {
-    daily: {
-      Present: 60,
-      Late: 20,
-      Absent: 10,
-      Leave: 10,
-    },
-    weekly: {
-      Present: 65,
-      Late: 15,
-      Absent: 15,
-      Leave: 5,
-    },
-    monthly: {
-      Present: 70,
-      Late: 10,
-      Absent: 12,
-      Leave: 8,
-    },
-    yearly: {
-      Present: 75,
-      Late: 8,
-      Absent: 10,
-      Leave: 7,
-    },
-  };
+  const fetchStats = useCallback(async () => {
+    const today = nowBusiness();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+
+    switch (activeFilter) {
+      case "weekly":
+        startDate.setDate(today.getDate() - 6);
+        break;
+      case "monthly":
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case "yearly":
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+    }
+
+    try {
+      const response = await fetchAttendanceStatsForRange(
+        dispatch,
+        format(startDate, "yyyy-MM-dd"),
+        format(today, "yyyy-MM-dd")
+      );
+      const result = response?.result;
+      if (result) {
+        setStats({
+          totalPresent: result.totalPresent ?? 0,
+          totalLate: result.totalLate ?? 0,
+          totalAbsent: result.totalAbsent ?? 0,
+          totalOnLeave: result.totalOnLeave ?? 0,
+          totalRecords: result.totalRecords ?? 0,
+          attendancePercentage: result.attendancePercentage ?? 0,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch attendance overview stats:", error);
+    }
+  }, [dispatch, activeFilter]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const toPercent = (count: number) =>
+    stats.totalRecords > 0 ? Math.round((count / stats.totalRecords) * 100) : 0;
+
+  const presentPct = toPercent(stats.totalPresent);
+  const latePct = toPercent(stats.totalLate);
+  const absentPct = toPercent(stats.totalAbsent);
+  const leavePct = toPercent(stats.totalOnLeave);
 
   const data: ChartData<"bar"> = {
     labels: [""],
     datasets: [
       {
         label: "Present",
-        data: [filterData[activeFilter].Present],
+        data: [presentPct],
         backgroundColor: "#597BE8BF",
       },
       {
         label: "Late",
-        data: [filterData[activeFilter].Late],
+        data: [latePct],
         backgroundColor: "#1C202FB2",
       },
       {
         label: "Absent",
-        data: [filterData[activeFilter].Absent],
+        data: [absentPct],
         backgroundColor: "#FEC84B",
       },
       {
         label: "Leave",
-        data: [filterData[activeFilter].Leave],
+        data: [leavePct],
         backgroundColor: "#F97066",
       },
     ],
@@ -138,13 +175,15 @@ const AttendanceChart: React.FC = () => {
         </div>
       </div>
       <div className="py-[32px]">
-        <h1 className="text-g-gray-1000 text-[48px] font-semibold">65%</h1>
+        <h1 className="text-g-gray-1000 text-[48px] font-semibold">
+          {stats.attendancePercentage}%
+        </h1>
         <div className="flex justify-between">
           <span className="text-(--genrel-text-light) text-base font-medium">
             Attendance Rate
           </span>
           <span className="text-(--genrel-text-light) text-base font-medium">
-            40 Hours completed out of 44
+            {stats.totalPresent + stats.totalLate} Present of {stats.totalRecords} Records
           </span>
         </div>
       </div>
@@ -156,26 +195,10 @@ const AttendanceChart: React.FC = () => {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          {
-            label: "Present",
-            color: "#597BE8BF",
-            value: filterData[activeFilter].Present,
-          },
-          {
-            label: "Late",
-            color: "#1C202FB2",
-            value: filterData[activeFilter].Late,
-          },
-          {
-            label: "Absent",
-            color: "#FEC84B",
-            value: filterData[activeFilter].Absent,
-          },
-          {
-            label: "Leave",
-            color: "#F97066",
-            value: filterData[activeFilter].Leave,
-          },
+          { label: "Present", color: "#597BE8BF", value: presentPct },
+          { label: "Late", color: "#1C202FB2", value: latePct },
+          { label: "Absent", color: "#FEC84B", value: absentPct },
+          { label: "Leave", color: "#F97066", value: leavePct },
         ].map((item) => (
           <div key={item.label} className="flex items-center">
             <span

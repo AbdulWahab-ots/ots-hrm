@@ -140,19 +140,24 @@ const AttendanceTable = () => {
       // employee profile anymore (they key off userId, not employeeId, and mostly
       // carry no FK back to Employee) — fall back instead of crashing the whole page.
       const employee = user?.employee ?? { id: null, designationId: null, departmentId: null };
-      let status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" | "DAY_OFF" = "Absent";
+      let status: "PRESENT" | "Absent" | "Late" | "ON_LEAVE" | "DAY_OFF" | "HALF_DAY" | "HOLIDAY" = "Absent";
       if (item.status === "PRESENT") {
         status = "PRESENT";
-      } else if (item.status === "DEFAULT") {
-        status = "Absent";
+      } else if (item.status === "LATE" || item.lateMinutes > 0) {
+        status = "Late";
       } else if (item.status === "ON_LEAVE") {
         status = "ON_LEAVE";
       } else if (item.status === "DAY_OFF") {
         // A scheduled day off is not an unexcused absence — keep it visually and
         // statistically distinct from "Absent" (see AttendanceOverview's stats calc).
         status = "DAY_OFF";
-      } else if (item.lateMinutes > 0) {
-        status = "Late";
+      } else if (item.status === "HALF_DAY") {
+        status = "HALF_DAY";
+      } else if (item.status === "HOLIDAY") {
+        status = "HOLIDAY";
+      } else {
+        // DEFAULT and ABSENT both mean the employee didn't show up.
+        status = "Absent";
       }
       const shiftName =
         shifts?.find((shift: { id: string }) => shift.id === item.shiftId)
@@ -270,22 +275,15 @@ const AttendanceTable = () => {
     }
 
     if (selectedStatus && selectedStatus !== "") {
+      // The backend stores a late check-in as its own real status
+      // (AttendanceStatus.LATE), not PRESENT + a lateMinutes side-channel, so
+      // the dropdown's value (already uppercase, e.g. "LATE") maps directly.
       filters.filtersRequest.push({
         field: "status",
         operator: 1,
         matchMode: 1,
-        value:
-          selectedStatus === "Late" ? "PRESENT" : selectedStatus.toUpperCase(),
+        value: selectedStatus.toUpperCase(),
       });
-
-      if (selectedStatus === "Late") {
-        filters.filtersRequest.push({
-          field: "lateMinutes",
-          operator: 1,
-          matchMode: 2,
-          value: 0,
-        });
-      }
     }
 
     return filters;
@@ -480,14 +478,14 @@ const AttendanceTable = () => {
               variant="outline"
               onClick={() => setIsBulkSyncOpen(true)}
             />
-            {/* <CustomDropdown
+            <CustomDropdown
               id="department-filter"
               name="department"
               options={departmentOptions}
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
               placeholder="Select Department"
-            /> */}
+            />
             <CustomDropdown
               id="shift-filter"
               name="shift"

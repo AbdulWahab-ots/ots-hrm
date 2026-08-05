@@ -19,14 +19,14 @@ const AttendanceManagement = () => {
         Monitor and manage employee attendance
       </p>
       <div className="grid lg:grid-cols-6 mt-6 lg:gap-6 gap-4 mb-[27px]">
-        {/* <ClockStatusCard /> */}
-        {/* <AttendanceChart /> */}
+        <ClockStatusCard />
+        <AttendanceChart />
         <AttendanceOverview />
         <AttendanceDuration />
       </div>
 
       {/* Toggle buttons */}
-      {/* <h2 className="flex gap-4 font-semibold my-6">
+      <h2 className="flex gap-4 font-semibold my-6">
         <button
           onClick={() => setViewMode("reports")}
           className={`px-3 py-3 text-base rounded-[16px] ${viewMode === "reports"
@@ -45,7 +45,7 @@ const AttendanceManagement = () => {
         >
           Overviews
         </button>
-      </h2> */}
+      </h2>
 
       {/* Conditional rendering */}
       {viewMode === "reports" && <AttendanceTable />}

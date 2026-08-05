@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -13,8 +13,13 @@ import {
   ChartOptions,
   Chart,
 } from "chart.js";
+import { useDispatch } from "react-redux";
+import { format } from "date-fns";
 import HeaderWithTooltip from "@/components/common/Typography/HeaderWithTooltip";
 import SegmentedTabs from "@/components/common/SegmentedTabs";
+import { AppDispatch } from "@/store/store";
+import { fetchAttendanceRecordsForRange } from "@/services/adminServices";
+import { nowBusiness } from "@/utils/timezone";
 
 const PERIOD_OPTIONS: {
   value: "day" | "week" | "year" | "month";
@@ -40,68 +45,76 @@ const DepartmentAttendence: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<
     "day" | "week" | "year" | "month"
   >("year");
+  const [labels, setLabels] = useState<string[]>([]);
+  const [percentages, setPercentages] = useState<number[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
 
-  // Sample data for different time filters
-  const filterData = {
-    day: {
-      labels: [
-        "IT",
-        "Human Resources",
-        "Design",
-        "Marketing",
-        "Finance",
-        "Customer Support",
-        "Clinics",
-      ],
-      data: [60, 80, 55, 70, 40, 90, 50],
-    },
-    week: {
-      labels: [
-        "IT",
-        "Human Resources",
-        "Design",
-        "Marketing",
-        "Finance",
-        "Customer Support",
-        "Clinics",
-      ],
-      data: [55, 75, 65, 85, 30, 70, 60],
-    },
-    year: {
-      labels: [
-        "IT",
-        "Human Resources",
-        "Design",
-        "Marketing",
-        "Finance",
-        "Customer Support",
-        "Clinics",
-      ],
-      data: [50, 75, 90, 50, 25, 60, 75],
-    },
-    month: {
-      labels: [
-        "IT",
-        "Human Resources",
-        "Design",
-        "Marketing",
-        "Finance",
-        "Customer Support",
-        "Clinics",
-      ],
-      data: [30, 60, 80, 40, 20, 90, 50],
-    },
-  };
+  const fetchDepartmentAttendance = useCallback(async () => {
+    const today = nowBusiness();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+
+    switch (activeFilter) {
+      case "week":
+        startDate.setDate(today.getDate() - 6);
+        break;
+      case "month":
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case "year":
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      // "day": startDate === today already
+    }
+
+    try {
+      const response = await fetchAttendanceRecordsForRange(
+        dispatch,
+        format(startDate, "yyyy-MM-dd"),
+        format(today, "yyyy-MM-dd"),
+        ["user", "user.employee", "user.employee.department"]
+      );
+      const records: any[] = response?.result?.data ?? [];
+
+      const byDepartment = new Map<string, { present: number; total: number }>();
+      records.forEach((record) => {
+        if (record.status === "DAY_OFF" || record.status === "HOLIDAY") return;
+        const deptName = record.user?.employee?.department?.name || "No Department";
+        const bucket = byDepartment.get(deptName) || { present: 0, total: 0 };
+        bucket.total += 1;
+        if (record.status === "PRESENT" || record.status === "LATE") {
+          bucket.present += 1;
+        }
+        byDepartment.set(deptName, bucket);
+      });
+
+      const entries = Array.from(byDepartment.entries());
+      setLabels(entries.map(([name]) => name));
+      setPercentages(
+        entries.map(([, { present, total }]) =>
+          total > 0 ? Math.round((present / total) * 100) : 0
+        )
+      );
+    } catch (error) {
+      console.error("Failed to fetch department attendance:", error);
+      setLabels([]);
+      setPercentages([]);
+    }
+  }, [dispatch, activeFilter]);
+
+  useEffect(() => {
+    fetchDepartmentAttendance();
+  }, [fetchDepartmentAttendance]);
 
   const handleFilterChange = (filter: "day" | "week" | "year" | "month") => {
     setActiveFilter(filter);
   };
 
   const data: ChartData<"bar"> = {
-    labels: filterData[activeFilter].labels,
+    labels,
     datasets: [
       {
-        data: filterData[activeFilter].data,
+        data: percentages,
         backgroundColor: "#597BE8BF",
         borderColor: "#597BE8BF",
         borderWidth: 1,
@@ -156,8 +169,8 @@ const DepartmentAttendence: React.FC = () => {
     <div className="w-full  lg:col-span-5  p-4 lg:p-6 bg-g-background-100 shadow-geist-card  border-[1px] border-(--genrel-light-stroke) rounded-[var(--g-radius-md)]">
       <div className="flex flex-col sm:flex-row pb-4 justify-between gap-2 items-start">
         <HeaderWithTooltip
-          title="Company Creation Timeline"
-          tooltipContent="This shows the timeline of company department creation"
+          title="Department Attendance"
+          tooltipContent="This shows the attendance rate per department"
           iconSize={12}
         />
         <SegmentedTabs

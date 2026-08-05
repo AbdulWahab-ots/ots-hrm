@@ -71,6 +71,8 @@ export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
         // A scheduled day off is not an unexcused absence — a distinct blue keeps it
         // from reading as a negative/red status like Absent.
         DAY_OFF: "text-g-blue-800 bg-g-blue-100",
+        HALF_DAY: "text-g-amber-900 bg-g-amber-100",
+        HOLIDAY: "text-g-blue-800 bg-g-blue-100",
       };
       const Icon = {
         PRESENT: IoCheckmarkSharp,
@@ -78,8 +80,17 @@ export const AdminattendanceColumns: ColumnDef<Attendance>[] = [
         Absent: RxCross2,
         Late: HiOutlineExclamationCircle,
         DAY_OFF: FiCalendar,
+        HALF_DAY: HiOutlineExclamationCircle,
+        HOLIDAY: FiCalendar,
       }[status];
-      const statusLabel = status === "DAY_OFF" ? "Day Off" : status;
+      const statusLabel =
+        status === "DAY_OFF"
+          ? "Day Off"
+          : status === "HALF_DAY"
+            ? "Half Day"
+            : status === "HOLIDAY"
+              ? "Holiday"
+              : status;
 
       return (
         <span

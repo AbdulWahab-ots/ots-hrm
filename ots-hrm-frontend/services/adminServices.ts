@@ -363,7 +363,8 @@ export const sendCheckInOutReminders = async (
 export const fetchAttendanceRecordsForRange = async (
   dispatch: AppDispatch,
   startDate: string,
-  endDate: string
+  endDate: string,
+  includes?: string[]
 ): Promise<any> => {
   return apiHandler(dispatch, "post", "/attendance/get_all", {
     data: {
@@ -377,6 +378,7 @@ export const fetchAttendanceRecordsForRange = async (
             rangeValues: { start: startDate, end: endDate },
           },
         ],
+        ...(includes ? { includes } : {}),
       },
     },
     showSuccessToast: false,
