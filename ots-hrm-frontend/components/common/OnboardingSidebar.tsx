@@ -45,22 +45,22 @@ function OnboardingSidebar({ companyStats }: OnboardingSidebarProps) {
 
   const onboardingSteps = [
     {
-      path: "/admin/onboarding/departments",
+      path: "/admin/onboarding/department",
       label: "Departments",
       key: "departments",
     },
-    { path: "/admin/onboarding/benefits", label: "Benefits", key: "benefits" },
+    { path: "/admin/onboarding/benefit", label: "Benefits", key: "benefits" },
     {
-      path: "/admin/onboarding/designations",
+      path: "/admin/onboarding/designation",
       label: "Designations",
       key: "designations",
     },
     {
-      path: "/admin/onboarding/leave-types",
+      path: "/admin/onboarding/leave-type",
       label: "Leave Types",
       key: "leaveTypes",
     },
-    { path: "/admin/onboarding/shifts", label: "Shifts", key: "shifts" },
+    { path: "/admin/onboarding/shift", label: "Shifts", key: "shifts" },
   ];
 
   const fetchUserProfile = async () => {

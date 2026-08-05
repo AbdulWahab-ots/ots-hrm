@@ -46,11 +46,6 @@ const OnBoardingDepartmentStep: React.FC = () => {
     }
   };
 
-  const handleCancel = () => {
-    // Navigate back or to a specific route on cancel
-    // router.push("/department"); // Adjust the route as needed
-  };
-
   useEffect(() => {
     if (showSuccess) {
       const timer = setTimeout(() => {
@@ -75,14 +70,10 @@ const OnBoardingDepartmentStep: React.FC = () => {
               <h2 className="lg:text-heading-48 text-center sm:text-[30px] text-3xl font-semibold text-g-gray-1000">
                 Create Department
               </h2>
-              <p className="py-4 flex items-center h-[28px] px-3 bg-g-gray-100 rounded-[var(--g-radius-sm)] text-sm text-g-gray-900">
-                EMO-90943
-              </p>
             </div>
             <CreateDepartment
               className="min-h-[320px]"
               onSubmit={handleCreateDepartment}
-              onCancel={handleCancel}
             />
           </div>
         </Wizard>

@@ -31,7 +31,7 @@ const benefitTypeOptions: DropdownOption[] = [
   { label: "INSURANCE", value: "INSURANCE" },
   { label: "VACATION", value: "VACATION" },
   { label: "EDUCATION", value: "EDUCATION" },
-  { label: "WELLNESS", value: "Wellness" },
+  { label: "WELLNESS", value: "WELLNESS" },
   { label: "TRANSPORTATION", value: "TRANSPORTATION" },
   { label: "OTHER", value: "OTHER" },
 ];
