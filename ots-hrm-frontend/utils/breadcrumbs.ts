@@ -41,7 +41,6 @@ export const routeLabels: Record<string, string> = {
   "/admin/reports/leave": "Leave Report",
   "/admin/reports/employee": "Employee Report",
   "/admin/reports/payroll": "Payroll Report",
-  "/admin/profile": "Profile",
   "/admin/onboarding": "Onboarding",
 
   // ---- Employee ----

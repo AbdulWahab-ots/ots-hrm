@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Bell, Edit, KeyRound, User, ArrowLeft } from "lucide-react";
+import { useDispatch } from "react-redux";
 import Button from "../../Button";
 import HeaderWithTooltip from "../../Typography/HeaderWithTooltip";
 import ChangePassword from "./ChnagePassword";
 import NotificationManagement from "./NotificationManagement";
 import EditProfile from "./ProfileSetting";
 import BackButton from "../../BackButton";
+import { AppDispatch } from "@/store/store";
+import { getAllDepartmentAPI } from "@/services/adminServices";
+import { GetDepartmentsPayload } from "@/utils/types";
 
 // Placeholder for ChangePasswordWrapper remains the same
 const ChangePasswordWrapper: React.FC<{ onBack: () => void }> = ({
@@ -37,6 +41,27 @@ const AdminProfile: React.FC<AdminProfileProps> = ({ user }) => {
   const [activeModal, setActiveModal] = useState<
     "notification" | "edit" | "password" | null
   >(null);
+
+  const dispatch = useDispatch<AppDispatch>();
+  const [departmentCount, setDepartmentCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchDepartmentCount = async () => {
+      const payload: GetDepartmentsPayload = {
+        pagedListRequest: { pageNo: 1, pageSize: 1, getAllRecords: false },
+        queryOptionsRequest: { filtersRequest: [], sortRequest: [], includes: [] },
+      };
+      try {
+        const response = await getAllDepartmentAPI(dispatch, payload);
+        if (response?.result) {
+          setDepartmentCount(response.result.total);
+        }
+      } catch (error) {
+        console.error("Failed to fetch department count:", error);
+      }
+    };
+    fetchDepartmentCount();
+  }, [dispatch]);
 
   const fullName =
     user?.firstName || user?.lastName
@@ -104,7 +129,7 @@ const AdminProfile: React.FC<AdminProfileProps> = ({ user }) => {
                   textClassName="text-heading-16 text-g-gray-900"
                 />
                 <p className="text-[36px] font-semibold text-g-gray-1000 mt-6">
-                  5
+                  {departmentCount ?? "—"}
                 </p>
               </div>
 
@@ -131,19 +156,14 @@ const AdminProfile: React.FC<AdminProfileProps> = ({ user }) => {
                   iconSize={14}
                   textClassName="text-heading-16 text-g-gray-900"
                 />
-                <ul className="space-y-3 text-copy-14 text-g-gray-900 mt-4">
-                  <li className="flex items-center gap-2">
-                    <span className="p-2 rounded-[var(--g-radius-sm)] bg-g-blue-100">
-                      <User className="w-5 h-5 text-g-gray-1000" />
-                    </span>
-                    <div>
-                      <p className="text-label-14 text-g-gray-1000">
-                        Profile Updated
-                      </p>
-                      <span className="text-label-12 text-g-gray-700">Just now</span>
-                    </div>
-                  </li>
-                </ul>
+                <div className="flex flex-col items-center justify-center text-center mt-4 py-4">
+                  <span className="p-2 rounded-[var(--g-radius-sm)] bg-g-blue-100 mb-2">
+                    <User className="w-5 h-5 text-g-gray-1000" />
+                  </span>
+                  <p className="text-label-14 text-g-gray-700">
+                    No recent activity
+                  </p>
+                </div>
               </div>
 
               {/* Quick Actions */}
