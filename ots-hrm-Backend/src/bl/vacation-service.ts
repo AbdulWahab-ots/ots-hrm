@@ -10,6 +10,7 @@ import { Service } from "./generics/service";
 import { AppError } from "../utility/app-error";
 import { Between, LessThanOrEqual, MoreThanOrEqual, Equal, Or, Not, In } from "typeorm";
 import { DefaultRoles } from "../constants";
+import { requiresOneYearTenure } from "../utility";
 
 @injectable()
 export class VacationService extends Service<Vacation, IVacationResponse, IVacationRequest> {
@@ -43,6 +44,18 @@ export class VacationService extends Service<Vacation, IVacationResponse, IVacat
             leaveType = await this.leaveTypeService.getById(vacationRequest.typeId, contextUser);
             if (!leaveType) {
                 throw new AppError(`Leave type with ID ${vacationRequest.typeId} does not exist`, '404');
+            }
+
+            // Defense-in-depth: the leave-type dropdown already omits tenure-restricted
+            // types (e.g. Annual Leave) for ineligible employees, but enforce it here too
+            // in case a request is submitted with a typeId the UI wouldn't have offered.
+            if (requiresOneYearTenure(leaveType.name)) {
+                const employee = await this.employeeRepository.firstOrDefault({
+                    where: { userId: contextUser.id, companyId: contextUser.companyId }
+                });
+                if (employee && !employee.hasCompletedOneYear()) {
+                    throw new AppError(`${leaveType.name} is only available after completing 1 full year of employment`, '403');
+                }
             }
         }
 

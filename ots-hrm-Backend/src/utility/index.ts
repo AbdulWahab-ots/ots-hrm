@@ -18,3 +18,4 @@ export * from './number-utility';
 export * from './biometric-attendance-utility';
 export * from './cors-utility';
 export * from './timezone-utility';
+export * from './leave-eligibility-utility';

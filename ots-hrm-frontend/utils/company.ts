@@ -49,6 +49,7 @@ export interface FilterRequest {
   matchMode: number;
   value?: string; // Made optional to support rangeValues
   rangeValues?: { start: string; end: string };
+  ignoreCase?: boolean; // Case-insensitive Like matching (backend ILike)
 }
 
 export interface QueryOptionsRequest {

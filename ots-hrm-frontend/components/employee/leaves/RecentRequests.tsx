@@ -3,18 +3,23 @@
 
 import Button from "@/components/common/Button";
 import { Plus } from "lucide-react";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { IoSettingsOutline } from "react-icons/io5";
 import CreateLeaveRequest from "./add";
 import CustomModal from "@/components/common/CustomModal";
 import SuccessConfirmation from "@/components/common/SuccessConfirmation";
 import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/store/store";
-import { createLeaveRequestAPI } from "@/services/employeeService";
+import { useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store/store";
+import {
+  createLeaveRequestAPI,
+  getAllVacationsAPI,
+} from "@/services/employeeService";
 import { triggerLeaveRefresh } from "@/store/features/global/globalSlice";
 import Calendar from "../dashboard/components/Calendar";
 import { PiReceiptBold } from "react-icons/pi";
 import QuickActions from "./QuickActions";
+import { format } from "date-fns";
 
 interface RequestCardProps {
   title: string;
@@ -48,25 +53,52 @@ const RequestCard: React.FC<RequestCardProps> = ({
 };
 
 
+// Vacation.status values ("PENDING"/"APPROVED"/"REJECTED"/"CANCELLED") -> the card's
+// lowercase status prop. Anything else (e.g. CANCELLED) falls back to "pending" styling
+// rather than crashing on an unrecognized value.
+const toCardStatus = (status: string): RequestCardProps["status"] => {
+  const lower = status?.toLowerCase();
+  return lower === "approved" || lower === "rejected" ? lower : "pending";
+};
+
 const RecentRequests = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const refreshLeaves = useSelector(
+    (state: RootState) => state.global.refreshLeaves
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [requests, setRequests] = useState<RequestCardProps[]>([
-    // Explicitly type the state
-    {
-      title: "Sick Leaves",
-      dateRange: "08/10/2025 to 08/12/2025",
-      status: "rejected",
-    },
-    {
-      title: "Sick Leaves",
-      dateRange: "08/10/2025",
-      status: "approved",
-    },
-  ]);
+  const [requests, setRequests] = useState<RequestCardProps[]>([]);
+
+  const loadRecentRequests = useCallback(async () => {
+    const response = await getAllVacationsAPI(dispatch, {
+      pagedListRequest: { pageNo: 1, pageSize: 2, getAllRecords: false },
+      queryOptionsRequest: {
+        filtersRequest: [
+          { field: "requestType", operator: 1, matchMode: 1, value: "LEAVE" },
+        ],
+        sortRequest: [{ field: "createdAt", direction: 1, priority: 1 }],
+        includes: ["leaveType"],
+      },
+    });
+
+    const recent = (response?.result?.data ?? []).map((vacation: any) => ({
+      title: vacation.leaveType?.name || "Leave",
+      dateRange:
+        vacation.fromDate === vacation.toDate
+          ? format(new Date(vacation.fromDate), "MM/dd/yyyy")
+          : `${format(new Date(vacation.fromDate), "MM/dd/yyyy")} to ${format(new Date(vacation.toDate), "MM/dd/yyyy")}`,
+      status: toCardStatus(vacation.status),
+    }));
+
+    setRequests(recent);
+  }, [dispatch]);
+
+  useEffect(() => {
+    loadRecentRequests();
+  }, [loadRecentRequests, refreshLeaves]);
 
   const handleApplyLeave = () => {
     setIsModalOpen(true);
@@ -89,16 +121,8 @@ const RecentRequests = () => {
         setSuccessMessage("Leave request submitted successfully!");
         setIsSuccessModalOpen(true);
         setIsModalOpen(false);
-        // Update local requests state to reflect new leave immediately
-        setRequests((prev) => [
-          {
-            title: values.reason || "New Leave",
-            dateRange: `${values.fromDate} to ${values.toDate}`,
-            status: "pending", // Now compatible with RequestCardProps
-          },
-          ...prev,
-        ]);
-        // Trigger re-fetch in VocationTable
+        // Triggers this component's own refetch (via the refreshLeaves effect above)
+        // as well as VocationTable's, so both show the real saved record.
         dispatch(triggerLeaveRefresh());
       } else {
         throw new Error("API returned false");

@@ -25,42 +25,57 @@ export const buildQuery = <T extends CompanyEntityBase | EntityBase>(fetchReques
     return query;
 }
 
+// Builds a (possibly nested) where-clause entry from a field path. Most fields are a
+// plain column name ("status"), but a dot-separated path ("requestedByUser.firstName")
+// targets a column on a joined relation - TypeORM expects that as a nested object
+// ({ requestedByUser: { firstName: ... } }), not a flat dotted key, so this recurses
+// to build the right shape. The relation must already be present in `includes` for
+// TypeORM to generate the join this filter relies on.
+const buildNestedWhere = (fieldPath: string, condition: any): any => {
+    const dot = fieldPath.indexOf('.');
+    if (dot === -1) return { [fieldPath]: condition };
+    const head = fieldPath.slice(0, dot);
+    const rest = fieldPath.slice(dot + 1);
+    return { [head]: buildNestedWhere(rest, condition) };
+};
+
 const queryMapper = <T>(filterRequest: IFilter<T, keyof T>): FindOptionsWhere<T> => {
     let whereClause: FindOptionsWhere<T> = {};
+    const field = filterRequest.field as string;
 
     switch (filterRequest.matchMode) {
         case FilterMatchModes.Contains:
-            whereClause = { [filterRequest.field as string]: ArrayContains([filterRequest.value]) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, ArrayContains([filterRequest.value]));
             break;
         case FilterMatchModes.Equal:
-            whereClause = { [filterRequest.field as string]: Equal(filterRequest.value) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, Equal(filterRequest.value));
             break;
         case FilterMatchModes.GreaterThan:
-            whereClause = { [filterRequest.field as string]: MoreThan(filterRequest.value) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, MoreThan(filterRequest.value));
             break;
         case FilterMatchModes.GreaterThanOrEqual:
-            whereClause = { [filterRequest.field as string]: MoreThanOrEqual(filterRequest.value) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, MoreThanOrEqual(filterRequest.value));
             break;
         case FilterMatchModes.LessThan:
-            whereClause = { [filterRequest.field as string]: LessThan(filterRequest.value) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, LessThan(filterRequest.value));
             break;
         case FilterMatchModes.LessThanOrEqual:
-            whereClause = { [filterRequest.field as string]: LessThanOrEqual(filterRequest.value) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, LessThanOrEqual(filterRequest.value));
             break;
         case FilterMatchModes.NotEqual:
-            whereClause = { [filterRequest.field as string]: Not(filterRequest.value) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, Not(filterRequest.value));
             break;
         case FilterMatchModes.Like:
-            whereClause = { [filterRequest.field as string]: (filterRequest.ignoreCase ? ILike(`%${filterRequest.value}%`) : Like(`%${filterRequest.value}%`)) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, filterRequest.ignoreCase ? ILike(`%${filterRequest.value}%`) : Like(`%${filterRequest.value}%`));
             break;
         case FilterMatchModes.Any:
-            whereClause = { [filterRequest.field as string]: Any<T[keyof T]>(filterRequest.values as Array<any>) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, Any<T[keyof T]>(filterRequest.values as Array<any>));
             break;
         case FilterMatchModes.Between:
-            whereClause = { [filterRequest.field as string]: Between(filterRequest.rangeValues?.start, filterRequest.rangeValues?.end) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, Between(filterRequest.rangeValues?.start, filterRequest.rangeValues?.end));
             break;
         case FilterMatchModes.In:
-            whereClause = { [filterRequest.field as string]: In(filterRequest.values as Array<T[keyof T]>) } as FindOptionsWhere<T>;
+            whereClause = buildNestedWhere(field, In(filterRequest.values as Array<T[keyof T]>));
             break;
         default:
             break;

@@ -208,6 +208,16 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
         return diffMonths;
     }
 
+    // Whether a full year has elapsed since joining, as of `asOf` (default now).
+    // Uses calendar-based date arithmetic (not a 365-day/30-day approximation like
+    // getTenureInMonths()) so it's exact regardless of leap years - e.g. gates
+    // eligibility for tenure-restricted leave types like Annual Leave.
+    hasCompletedOneYear(asOf: Date = new Date()): boolean {
+        const oneYearAfterJoining = new Date(this.joiningDate);
+        oneYearAfterJoining.setFullYear(oneYearAfterJoining.getFullYear() + 1);
+        return asOf >= oneYearAfterJoining;
+    }
+
     // Enhanced onStatusChange method with better logging
     onStatusChange(newStatus: EmployeeStatus, departureDate?: Date | string): void {
         // Update the status

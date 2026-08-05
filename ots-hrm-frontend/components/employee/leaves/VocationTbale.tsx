@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { FiEye } from "react-icons/fi";
 import Button from "@/components/common/Button";
@@ -28,6 +27,7 @@ import { setIsLoading } from "@/store/features/global/globalSlice";
 import { vocationColumns } from "@/utils/Columns/vocationColumns";
 import { getAllVacationsAPI } from "@/services/employeeService";
 import CountBadge from "@/components/common/CountBadge";
+import { businessStartOfDayUTC, businessEndOfDayUTC } from "@/utils/timezone";
 
 const VocationTable = () => {
   const [localData, setLocalData] = useState<Vocation[]>([]);
@@ -146,7 +146,16 @@ const VocationTable = () => {
 
   const buildFilters = (): QueryOptionsRequest => {
     const filters: QueryOptionsRequest = {
-      filtersRequest: [],
+      filtersRequest: [
+        // This page is specifically the Leaves List - without this, the shared
+        // /vacation/get_all endpoint would also return remote-work requests.
+        {
+          field: "requestType",
+          operator: 1,
+          matchMode: 1,
+          value: "LEAVE",
+        },
+      ],
       sortRequest: [
         {
           field: "createdAt",
@@ -163,8 +172,13 @@ const VocationTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          start: format(selectedRange.startDate, "yyyy-MM-dd"),
-          end: format(selectedRange.endDate, "yyyy-MM-dd"),
+          // createdAt is a full timestamp column, not a bare date. A bare "yyyy-MM-dd"
+          // string is ambiguous - the backend parses it using the SERVER's own OS
+          // timezone (not necessarily BUSINESS_TIMEZONE or even UTC), which can shift
+          // the range by hours and make it match nothing. These helpers resolve the
+          // correct absolute UTC instant for start/end of day in BUSINESS_TIMEZONE.
+          start: businessStartOfDayUTC(selectedRange.startDate),
+          end: businessEndOfDayUTC(selectedRange.endDate),
         },
       });
     }
@@ -179,8 +193,10 @@ const VocationTable = () => {
     }
 
     if (selectedLeaveType && selectedLeaveType !== "") {
+      // typeId is the actual FK column on Vacation - "leaveType" is only the relation
+      // name and doesn't filter correctly against a raw id value.
       filters.filtersRequest.push({
-        field: "leaveType",
+        field: "typeId",
         operator: 1,
         matchMode: 1,
         value: selectedLeaveType,
@@ -188,10 +204,21 @@ const VocationTable = () => {
     }
 
     if (debouncedSearchTerm) {
+      // Vacation has no "name" column - the employee's name lives on the joined
+      // requestedByUser relation. Match either first or last name (Or'd together,
+      // each still scoped by the And filters above via the query builder).
       filters.filtersRequest.push({
-        field: "name",
-        operator: 1,
-        matchMode: 1,
+        field: "requestedByUser.firstName",
+        operator: 2,
+        matchMode: 7,
+        ignoreCase: true,
+        value: debouncedSearchTerm,
+      });
+      filters.filtersRequest.push({
+        field: "requestedByUser.lastName",
+        operator: 2,
+        matchMode: 7,
+        ignoreCase: true,
         value: debouncedSearchTerm,
       });
     }

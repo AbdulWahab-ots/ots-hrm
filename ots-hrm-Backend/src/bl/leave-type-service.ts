@@ -1,16 +1,42 @@
 import { inject, injectable } from "tsyringe";
-import { LeaveTypeRepository } from "../dal";
+import { LeaveTypeRepository, EmployeeRepository } from "../dal";
 import { LeaveType } from "../entities";
-import { ILeaveTypeRequest, ILeaveTypeResponse, ITokenUser } from "../models";
+import { ILeaveTypeRequest, ILeaveTypeResponse, ITokenUser, IFetchRequest, IDataSourceResponse } from "../models";
 import { Service } from "./generics/service";
-import { generateCodeFromName, sanitizeString } from "../utility";
+import { generateCodeFromName, sanitizeString, requiresOneYearTenure } from "../utility";
 import { AppError } from "../utility/app-error";
 import { Not } from "typeorm";
 
 @injectable()
 export class LeaveTypeService extends Service<LeaveType, ILeaveTypeResponse, ILeaveTypeRequest> {
-    constructor(@inject('LeaveTypeRepository') private readonly leaveTypeRepository: LeaveTypeRepository) {
+    constructor(
+        @inject('LeaveTypeRepository') private readonly leaveTypeRepository: LeaveTypeRepository,
+        @inject('EmployeeRepository') private readonly employeeRepository: EmployeeRepository
+    ) {
         super(leaveTypeRepository, () => new LeaveType())
+    }
+
+    // Employees only see leave types they're currently eligible to request - e.g.
+    // Annual Leave requires 1 full completed year of tenure. Admin/management callers
+    // (managing the LeaveType configuration itself, not requesting leave) see every
+    // configured type unfiltered, since role !== 'employee' for those callers.
+    public async get(contextUser?: ITokenUser, fetchRequest?: IFetchRequest<ILeaveTypeRequest>): Promise<IDataSourceResponse<ILeaveTypeResponse>> {
+        const response = await super.get(contextUser, fetchRequest);
+
+        if (contextUser?.role === 'employee' && contextUser.id) {
+            const employee = await this.employeeRepository.firstOrDefault({
+                where: { userId: contextUser.id, companyId: contextUser.companyId }
+            });
+
+            if (employee && !employee.hasCompletedOneYear()) {
+                const eligible = (response.data || []).filter((lt: any) => !requiresOneYearTenure(lt.name));
+                const removed = response.data.length - eligible.length;
+                response.data = eligible;
+                response.total = Math.max(0, response.total - removed);
+            }
+        }
+
+        return response;
     }
 
     async update(id: string, request: ILeaveTypeRequest, contextUser: ITokenUser): Promise<ILeaveTypeResponse> {

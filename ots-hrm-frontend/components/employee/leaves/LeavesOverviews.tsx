@@ -1,112 +1,22 @@
-// "use client";
-
-// import React from "react";
-// import Image from "next/image";
-
-// import Casual from "../../../public/Casual-Icon.svg";
-// import Annual from "../../../public/Annual-icon.svg";
-// import Sick from "../../../public/Sick-Icon.svg";
-
-// interface LeaveCardProps {
-//   title: string;
-//   count: number;
-//   icon: any;
-//   bgColor?: string;
-// }
-
-// const LeaveCard: React.FC<LeaveCardProps> = ({
-//   title,
-//   count,
-//   icon,
-//   bgColor,
-// }) => {
-//   return (
-//     <div
-//       className="flex flex-col items-center justify-between rounded-2xl border"
-//       style={{
-//         height: "398px",
-//         borderColor: "#597BE84D",
-//         backgroundColor: bgColor || "#FFFFFF",
-//         padding: "24px",
-//       }}
-//     >
-//       {/* Title */}
-//       <div className="w-full text-left text-sm font-medium text-gray-700">
-//         {title}
-//       </div>
-
-//       {/* Icon */}
-//       <div className="flex flex-1 items-center justify-center">
-//         <Image src={icon} alt={title} width={120} height={120} />
-//       </div>
-
-//       {/* Count */}
-//       <div className="flex items-baseline gap-1">
-//         <span
-//           className={`text-4xl font-bold ${
-//             bgColor === "#F97066" ? "text-white" : "text-black"
-//           }`}
-//         >
-//           {count}
-//         </span>
-//         <span
-//           className={`text-sm ${
-//             bgColor === "#F97066" ? "text-white" : "text-gray-600"
-//           }`}
-//         >
-//           Left
-//         </span>
-//       </div>
-//     </div>
-//   );
-// };
-
-// const LeavesOverviews = () => {
-//   const leaveData = [
-//     {
-//       title: "Casual Leaves",
-//       count: 3,
-//       icon: Casual,
-//       bgColor: "#F97066",
-//     },
-//     {
-//       title: "Sick Leaves",
-//       count: 5,
-//       icon: Sick,
-//       bgColor: "#FFFFFF",
-//     },
-//     {
-//       title: "Annual Leaves",
-//       count: 12,
-//       icon: Annual,
-//       bgColor: "#FFFFFF",
-//     },
-//   ];
-
-//   return (
-//     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-//       {leaveData.map((leave, idx) => (
-//         <LeaveCard
-//           key={idx}
-//           title={leave.title}
-//           count={leave.count}
-//           icon={leave.icon}
-//           bgColor={leave.bgColor}
-//         />
-//       ))}
-//     </div>
-//   );
-// };
-
-// export default LeavesOverviews;
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store/store";
+import { fetchLeaveBalance } from "@/services/employeeService";
 
 import Casual from "../../../public/Casual-Icon.svg";
 import Annual from "../../../public/Annual-icon.svg";
 import Sick from "../../../public/Sick-Icon.svg";
+
+interface LeaveBalance {
+  leaveTypeId: string;
+  leaveTypeName: string;
+  totalLeaves: number;
+  usedLeaves: number;
+  remainingLeaves: number;
+}
 
 interface LeaveCardProps {
   title: string;
@@ -114,6 +24,17 @@ interface LeaveCardProps {
   icon: any;
   bgColor?: string;
 }
+
+// Leave types are freeform, company-configured names (no fixed icon per type in the
+// backend) - pick a representative icon by matching common naming, falling back to a
+// generic one so a newly configured type still renders something reasonable.
+const iconForLeaveType = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.includes("casual")) return Casual;
+  if (lower.includes("sick")) return Sick;
+  if (lower.includes("annual")) return Annual;
+  return Casual;
+};
 
 const LeaveCard: React.FC<LeaveCardProps> = ({
   title,
@@ -165,36 +86,45 @@ const LeaveCard: React.FC<LeaveCardProps> = ({
 };
 
 const LeavesOverviews = () => {
-  const leaveData = [
-    {
-      title: "Casual Leaves",
-      count: 3,
-      icon: Casual,
-      bgColor: "#F97066",
-    },
-    {
-      title: "Sick Leaves",
-      count: 5,
-      icon: Sick,
-      bgColor: "#FFFFFF",
-    },
-    {
-      title: "Annual Leaves",
-      count: 12,
-      icon: Annual,
-      bgColor: "#FFFFFF",
-    },
-  ];
+  const dispatch = useDispatch<AppDispatch>();
+  const refreshLeaves = useSelector(
+    (state: RootState) => state.global.refreshLeaves
+  );
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLeaveBalance(dispatch).then((response) => {
+      setBalances(response?.result?.leaveBalances ?? []);
+      setIsLoading(false);
+    });
+    // Refetch whenever a leave request is submitted elsewhere on this page
+    // (RecentRequests/CreateLeaveRequest dispatch triggerLeaveRefresh()), so the
+    // remaining-days count reflects the new PENDING/APPROVED request immediately.
+  }, [dispatch, refreshLeaves]);
+
+  if (isLoading) {
+    return (
+      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-[200px] rounded-[var(--g-radius-md)] border border-g-gray-alpha-400 bg-g-gray-100 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-      {leaveData.map((leave, idx) => (
+      {balances.map((balance, idx) => (
         <LeaveCard
-          key={idx}
-          title={leave.title}
-          count={leave.count}
-          icon={leave.icon}
-          bgColor={leave.bgColor}
+          key={balance.leaveTypeId}
+          title={balance.leaveTypeName}
+          count={balance.remainingLeaves}
+          icon={iconForLeaveType(balance.leaveTypeName)}
+          bgColor={idx === 0 ? "#F97066" : "#FFFFFF"}
         />
       ))}
     </div>
