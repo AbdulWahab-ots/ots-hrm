@@ -4,6 +4,7 @@ import { CommonRoutes } from "../constants";
 import { FastifyReply, FastifyRequest, preHandlerHookHandler, RouteHandlerMethod } from "fastify";
 import { ExtendedRequest } from "../models";
 import { authorize, validateCompanyHeader } from "../middlewares/authentication";
+import { requireSelfOr, hasAdminAccess } from "../middlewares/permissions";
 import { UploadService } from "../bl";
 
 @injectable()
@@ -15,6 +16,11 @@ export class UploadController extends ControllerBase {
             {
                 method: 'POST',
                 path: "profile-picture/:id",
+                // IDOR guard: only self-upload, or an admin/super admin uploading on
+                // behalf of an employee they manage (the Employees table/details
+                // pages) - a plain employee has no legitimate need to upload a
+                // picture for a different user's account.
+                middlewares: [requireSelfOr(hasAdminAccess) as preHandlerHookHandler],
                 handler: this.uploadProfilePic as RouteHandlerMethod
             },
             {

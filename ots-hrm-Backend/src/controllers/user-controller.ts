@@ -5,7 +5,7 @@ import { CommonRoutes } from "../constants";
 import { FastifyReply, FastifyRequest, preHandlerHookHandler, RouteHandlerMethod } from "fastify";
 import { ExtendedRequest, IFetchRequest, IFilter, IGetSingleRecordFilter, ILoginRequest, IUserRequest, ICreateUserRequestBody, IChangePasswordRequest } from "../models";
 import { authorize, validateCompanyHeader } from "../middlewares/authentication";
-import { hasPermission } from "../middlewares/permissions";
+import { hasPermission, requireSelfOr, hasFullSystemAccess } from "../middlewares/permissions";
 import { payloadValidator, paramsValidator } from "../middlewares/payload-validator";
 import { createUserRequestSchema, getUserByIdParamsSchema, updateUserSchema, toggleUserActiveSchema } from "../models/payload-schemas";
 import { changePasswordSchema } from "../models/payload-schemas/auth-schema";
@@ -43,7 +43,14 @@ export class UserController extends ControllerBase {
             {
                 method: 'PUT',
                 path: `${CommonRoutes.update}/:id`,
-                middlewares: [paramsValidator(getUserByIdParamsSchema), payloadValidator({ body: updateUserSchema })],
+                // IDOR guard: only self-edit, or a super admin editing another user
+                // (the "Companies > Admins" screen) - a plain company admin/employee
+                // has no legitimate need to edit a different user's account here.
+                middlewares: [
+                    paramsValidator(getUserByIdParamsSchema),
+                    payloadValidator({ body: updateUserSchema }),
+                    requireSelfOr(hasFullSystemAccess) as preHandlerHookHandler
+                ],
                 handler: this.update as RouteHandlerMethod
             },
             {
