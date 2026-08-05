@@ -506,3 +506,11 @@ export const getAllVacationsAPI = async (
     }
   );
 };
+
+// Company-wide leave-request counts by status ({ pending, approved, rejected })
+// - used by the Admin Dashboard alerts panel's "leaves need action" count.
+export const getLeaveStatsAPI = async (dispatch: AppDispatch): Promise<any> => {
+  return apiHandler(dispatch, "get", "/vacation/leave-stats", {
+    showSuccessToast: false,
+  });
+};

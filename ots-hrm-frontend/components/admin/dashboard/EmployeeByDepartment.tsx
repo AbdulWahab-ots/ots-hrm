@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -11,7 +11,11 @@ import {
   ChartOptions,
   Chart,
 } from "chart.js";
+import { useDispatch } from "react-redux";
 import HeaderWithTooltip from "@/components/common/Typography/HeaderWithTooltip";
+import { AppDispatch } from "@/store/store";
+import { fetchAttendanceRecordsForRange } from "@/services/adminServices";
+import { nowBusiness } from "@/utils/timezone";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -25,34 +29,58 @@ const DAYS = [
   "Sunday",
 ];
 
-const ATTENDANCE_DATA = {
-  year: {
-    present: [38, 40, 42, 37, 39, 35, 30], // Present employees (non-zero for Sunday)
-    absent: [12, 10, 8, 13, 11, 15, 0], // Absent employees (0 for Sunday to test absent=0 case)
-  },
-  month: {
-    present: [36, 39, 41, 35, 38, 34, 29],
-    absent: [14, 11, 9, 15, 12, 16, 21],
-  },
-  week: {
-    present: [37, 38, 40, 36, 37, 33, 28],
-    absent: [13, 12, 10, 14, 13, 17, 22],
-  },
-  day: {
-    present: [35, 37, 39, 34, 36, 32, 27],
-    absent: [15, 13, 11, 16, 14, 18, 23],
-  },
+const formatLocalDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
-
-type FilterType = "year" | "month" | "week" | "day";
 
 const EmployeeByDepartment: React.FC = () => {
   const chartRef = useRef<Chart<"bar">>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>("year");
+  const dispatch = useDispatch<AppDispatch>();
+  const [present, setPresent] = useState<number[]>(new Array(7).fill(0));
+  const [absent, setAbsent] = useState<number[]>(new Array(7).fill(0));
 
-  const handleFilterChange = (filter: FilterType) => {
-    setActiveFilter(filter);
-  };
+  useEffect(() => {
+    const fetchWeekAttendance = async () => {
+      const today = nowBusiness();
+      // ISO day-of-week: Monday = 0 ... Sunday = 6
+      const isoDayIndex = (today.getDay() + 6) % 7;
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - isoDayIndex);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+
+      try {
+        const response = await fetchAttendanceRecordsForRange(
+          dispatch,
+          formatLocalDate(monday),
+          formatLocalDate(sunday)
+        );
+        const records: any[] = response?.result?.data ?? [];
+
+        const presentCounts = new Array(7).fill(0);
+        const absentCounts = new Array(7).fill(0);
+
+        records.forEach((record) => {
+          const recordDate = new Date(record.date);
+          const dayIndex = (recordDate.getDay() + 6) % 7;
+          if (record.status === "PRESENT" || record.status === "LATE") {
+            presentCounts[dayIndex] += 1;
+          } else if (record.status === "ABSENT") {
+            absentCounts[dayIndex] += 1;
+          }
+        });
+
+        setPresent(presentCounts);
+        setAbsent(absentCounts);
+      } catch (error) {
+        console.error("Failed to fetch weekly attendance stats:", error);
+      }
+    };
+    fetchWeekAttendance();
+  }, [dispatch]);
 
   // Dynamically set borderRadius based on absent data
   const getBorderRadius = (absentValue: number) => {
@@ -88,12 +116,17 @@ const EmployeeByDepartment: React.FC = () => {
     };
   };
 
+  const maxCount = Math.max(
+    10,
+    ...present.map((v, i) => v + absent[i])
+  );
+
   const data: ChartData<"bar"> = {
     labels: DAYS,
     datasets: [
       {
         label: "Present",
-        data: ATTENDANCE_DATA[activeFilter].present,
+        data: present,
         backgroundColor: "#006bff",
         borderColor: "#fff",
         borderWidth: 1,
@@ -101,14 +134,13 @@ const EmployeeByDepartment: React.FC = () => {
         categoryPercentage: 0.95,
         borderRadius: (context) => {
           const index = context.dataIndex;
-          const absentValue = ATTENDANCE_DATA[activeFilter].absent[index];
-          return getBorderRadius(absentValue).present;
+          return getBorderRadius(absent[index]).present;
         },
         borderSkipped: false, // Ensure all corners can be rounded
       },
       {
         label: "Absent",
-        data: ATTENDANCE_DATA[activeFilter].absent,
+        data: absent,
         backgroundColor: "#fc0035",
         borderColor: "#fff",
         borderWidth: 1,
@@ -116,8 +148,7 @@ const EmployeeByDepartment: React.FC = () => {
         categoryPercentage: 0.95,
         borderRadius: (context) => {
           const index = context.dataIndex;
-          const absentValue = ATTENDANCE_DATA[activeFilter].absent[index];
-          return getBorderRadius(absentValue).absent;
+          return getBorderRadius(absent[index]).absent;
         },
         borderSkipped: false, // Ensure all corners can be rounded
       },
@@ -143,15 +174,13 @@ const EmployeeByDepartment: React.FC = () => {
       y: {
         stacked: true,
         beginAtZero: true,
-        max: 60,
+        max: maxCount,
         ticks: {
           color: "#8f8f8f",
-          stepSize: 10,
-          callback: (value) => `${value}`,
+          precision: 0,
         },
         border: { display: false },
         grid: {
-          // Corrected from grid25 to grid
           color: "rgba(0, 0, 0, 0.02)",
         },
       },

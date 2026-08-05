@@ -1,208 +1,6 @@
-// "use client";
-
-// import React from "react";
-// import { Doughnut } from "react-chartjs-2";
-// import {
-//   Chart as ChartJS,
-//   ArcElement,
-//   Tooltip,
-//   Legend,
-//   ChartData,
-//   ChartOptions,
-// } from "chart.js";
-// import { Info } from "lucide-react";
-
-// ChartJS.register(ArcElement, Tooltip, Legend);
-
-// const WorkingFormatChart: React.FC = () => {
-//   // Data for the background circle (full semi-transparent circle)
-//   const backgroundData: ChartData<"doughnut"> = {
-//     labels: ["Background"],
-//     datasets: [
-//       {
-//         data: [100],
-//         backgroundColor: ["rgba(255, 255, 255, 0.3)"],
-//         borderWidth: 0,
-//         borderRadius: 0,
-//         spacing: 0,
-//       },
-//     ],
-//   };
-
-//   // Data for the foreground segment (white progress indicator)
-//   const foregroundData: ChartData<"doughnut"> = {
-//     labels: ["Remote", "Hidden"],
-//     datasets: [
-//       {
-//         data: [40, 60], // 40% visible, 60% transparent
-//         backgroundColor: ["#FFFFFF", "rgba(0,0,0,0)"],
-//         borderWidth: 0,
-//         borderRadius: 50, // Rounded ends
-//         spacing: 0,
-//       },
-//     ],
-//   };
-
-//   const options: ChartOptions<"doughnut"> = {
-//     responsive: true,
-//     cutout: "75%",
-//     rotation: -90,
-//     circumference: 360,
-//     plugins: {
-//       legend: {
-//         display: false,
-//       },
-//       tooltip: {
-//         enabled: false,
-//       },
-//     },
-//   };
-
-//   return (
-//     <div className="w-full max-w-sm p-6 rounded-2xl bg-gradient-to-b from-sky-500 to-emerald-400 text-white shadow-lg">
-//       {/* Header */}
-//       <div className="flex items-center justify-between mb-6">
-//         <h2 className="text-lg font-medium">Working format</h2>
-//         <Info size={18} className="opacity-80" />
-//       </div>
-
-//       {/* Chart Container */}
-//       <div className="flex justify-center items-center">
-//         <div className="relative w-40 h-40">
-//           {/* Background Chart (Full semi-transparent circle) */}
-//           <div className="absolute inset-0">
-//             <Doughnut data={backgroundData} options={options} />
-//           </div>
-
-//           {/* Foreground Chart (White progress indicator) */}
-//           <div className="absolute inset-0">
-//             <Doughnut data={foregroundData} options={options} />
-//           </div>
-
-//           {/* Center Text */}
-//           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-//             <span className="text-sm font-normal">Remote</span>
-//             <span className="text-2xl font-bold">40%</span>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default WorkingFormatChart;
-
-// "use client";
-
-// import React from "react";
-// import { Doughnut } from "react-chartjs-2";
-// import {
-//   Chart as ChartJS,
-//   ArcElement,
-//   Tooltip,
-//   Legend,
-//   ChartData,
-//   ChartOptions,
-// } from "chart.js";
-// import { Info } from "lucide-react";
-// import HeaderWithTooltip from "@/components/common/Typography/HeaderWithTooltip";
-
-// ChartJS.register(ArcElement, Tooltip, Legend);
-// interface WorkingFormatChartProps {
-//   role?: string; // 'employee' or 'admin'
-// }
-
-// const WorkingFormatChart: React.FC<WorkingFormatChartProps> = ({ role }) => {
-//   // Data for the background circle (full semi-transparent circle)
-//    const isEmployee = role === "employee";
-//   const backgroundData: ChartData<"doughnut"> = {
-//     labels: ["Background"],
-//     datasets: [
-//       {
-//         data: [100],
-//         backgroundColor: [
-//           isEmployee ? "#E5E7EB" : "rgba(255, 255, 255, 0.3)",
-//         ],
-//         borderWidth: 0,
-//         borderRadius: 0,
-//         spacing: 0,
-//       },
-//     ],
-//   };
-
-//   // Data for the foreground segment (white progress indicator)
-//   const foregroundData: ChartData<"doughnut"> = {
-//     labels: ["Remote", "Hidden"],
-//     datasets: [
-//       {
-//         data: [40, 60], // 40% visible, 60% transparent
-//         backgroundColor: [
-//           isEmployee ? "#3961E4" : "#FFFFFF", // Blue for employee, white for admin
-//           isEmployee ? "#E5E7EB" : "rgba(0,0,0,0)", // Gray for employee, transparent for admin
-//         ],
-//         borderWidth: 0,
-//         borderRadius: 50, // Rounded ends
-//         spacing: 0,
-//       },
-//     ],
-//   };
-
-//   const options: ChartOptions<"doughnut"> = {
-//     responsive: true,
-//     cutout: "75%",
-//     rotation: -90,
-//     circumference: 360,
-//     plugins: {
-//       legend: {
-//         display: false,
-//       },
-//       tooltip: {
-//         enabled: false,
-//       },
-//     },
-//     maintainAspectRatio: false, // Important for proper sizing
-//   };
-
-//   return (
-//     <div
-//       className="w-full xl:col-span-3  p-6 rounded-3xl border-[#597BE84D] border-[1px] text-white shadow-lg"
-//       style={{
-//         background: "linear-gradient(135deg, #0097FE 0%, #27C6A0 100%)",
-//       }}
-//     >
-//       {/* Header */}
-//       <HeaderWithTooltip
-//         title="Working format"
-//         tooltipContent="Daily Working format "
-//         whiteText={true}
-//       />
-//       {/* Chart Container */}
-//       <div className="flex h-full justify-center items-center">
-//         <div className="relative w-56 h-56">
-//           <div className="absolute inset-0">
-//             <Doughnut data={backgroundData} options={options} />
-//           </div>
-//           {/* Foreground Chart (White progress indicator) */}
-//           <div className="absolute inset-0">
-//             <Doughnut data={foregroundData} options={options} />
-//           </div>
-//           {/* Center Text - properly centered */}
-//           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-//             <span className="text-sm text-[#F2F7FA] font-medium">Remote</span>
-//             <span className="lg:text-[33.75px] font-semibold ">40%</span>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default WorkingFormatChart;
-
-
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -212,8 +10,14 @@ import {
   ChartData,
   ChartOptions,
 } from "chart.js";
+import { useDispatch } from "react-redux";
 import HeaderWithTooltip from "@/components/common/Typography/HeaderWithTooltip";
 import { GoDotFill } from "react-icons/go";
+import { AppDispatch } from "@/store/store";
+import { getAllVacationsAPI } from "@/services/employeeService";
+import { GetVacationsPayload, Vocation } from "@/utils/company";
+import { fetchEmployeeStats } from "@/services/adminServices";
+import { todayBusinessISO } from "@/utils/timezone";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -223,6 +27,60 @@ interface WorkingFormatChartProps {
 
 const WorkingFormatChart: React.FC<WorkingFormatChartProps> = ({ role }) => {
   const isEmployee = role === "employee";
+  const dispatch = useDispatch<AppDispatch>();
+  // Employee-dashboard usage of this gauge (this employee's own onsite/remote
+  // status) is out of scope here - only the admin (company-wide) usage below
+  // is wired to real data, so the employee view keeps its prior placeholder.
+  const [remotePercentage, setRemotePercentage] = useState(isEmployee ? 40 : 0);
+
+  // Admin view: company-wide % of employees on an approved remote-work
+  // request covering today, vs everyone else (onsite).
+  useEffect(() => {
+    if (isEmployee) return;
+
+    const fetchRemoteWorkSplit = async () => {
+      const today = todayBusinessISO();
+      const payload: GetVacationsPayload = {
+        pagedListRequest: { pageNo: 1, pageSize: 1000, getAllRecords: true },
+        queryOptionsRequest: {
+          filtersRequest: [
+            { field: "requestType", operator: 1, matchMode: 1, value: "REMOTE_WORK" },
+            { field: "status", operator: 1, matchMode: 1, value: "APPROVED" },
+          ],
+          sortRequest: [],
+          includes: [],
+        },
+      };
+
+      try {
+        const [vacationResponse, employeeStats] = await Promise.all([
+          getAllVacationsAPI(dispatch, payload),
+          fetchEmployeeStats(dispatch),
+        ]);
+
+        const remoteToday = (vacationResponse?.result?.data ?? []).filter(
+          (vacation: Vocation) =>
+            vacation.fromDate &&
+            vacation.toDate &&
+            vacation.fromDate <= today &&
+            vacation.toDate >= today
+        ).length;
+
+        const totalEmployees = employeeStats?.result?.totalEmployees ?? 0;
+        setRemotePercentage(
+          totalEmployees > 0
+            ? Math.round((remoteToday / totalEmployees) * 100)
+            : 0
+        );
+      } catch (error) {
+        console.error("Failed to fetch working format split:", error);
+      }
+    };
+
+    fetchRemoteWorkSplit();
+  }, [isEmployee, dispatch]);
+
+  const onsitePercentage = 100 - remotePercentage;
 
   // Background circle
   const backgroundData: ChartData<"doughnut"> = {
@@ -245,7 +103,7 @@ const WorkingFormatChart: React.FC<WorkingFormatChartProps> = ({ role }) => {
     labels: [isEmployee ? "Onsite" : "Remote", "Hidden"],
     datasets: [
       {
-        data: [40,60],
+        data: [remotePercentage, onsitePercentage],
         backgroundColor: [
           isEmployee ? "var(--g-blue-700)" : "#FFFFFF", // Blue for employee, white for admin
           isEmployee ? "var(--g-gray-300)" : "rgba(0,0,0,0)", // Gray for employee, transparent for admin
@@ -309,7 +167,7 @@ const WorkingFormatChart: React.FC<WorkingFormatChartProps> = ({ role }) => {
             >
               {isEmployee ? "" : "Remote"}
             </span>
-            <span className="lg:text-[33.75px] font-semibold">40%</span>
+            <span className="lg:text-[33.75px] font-semibold">{remotePercentage}%</span>
           </div>
         </div>
 
@@ -332,4 +190,3 @@ const WorkingFormatChart: React.FC<WorkingFormatChartProps> = ({ role }) => {
 };
 
 export default WorkingFormatChart;
-

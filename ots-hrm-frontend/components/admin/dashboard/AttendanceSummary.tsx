@@ -14,7 +14,11 @@ import {
   rejectVocationRequest,
 } from "@/services/adminServices";
 import Button from "@/components/common/Button";
-import { nowBusiness } from "@/utils/timezone";
+import {
+  nowBusiness,
+  businessStartOfDayAsStoredTimestamp,
+  businessEndOfDayAsStoredTimestamp,
+} from "@/utils/timezone";
 
 import { FiExternalLink } from "react-icons/fi";
 import { useRouter } from "next/navigation";
@@ -37,22 +41,20 @@ const AttendanceSummary: React.FC = () => {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Format date as YYYY-MM-DD
-  const formatLocalDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  // Fetch leaves from API for today to tomorrow
+  // Fetch leaves from API for today
   const fetchLeaves = useCallback(
     async (statusFilter: "PENDING" | "APPROVED") => {
       const today = nowBusiness();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1); // Today + 1 day
-      const startDate = formatLocalDate(today);
-      const endDate = formatLocalDate(tomorrow);
+      // createdAt is a real timestamp column, but is populated via `new Date()`
+      // in backend app code and written into a `timestamp` (no time zone)
+      // column - Postgres silently drops the offset on insert, keeping only
+      // the server OS's (Asia/Karachi) wall-clock digits. These helpers
+      // re-express today's business-day boundary in that same representation
+      // instead of as a true UTC instant (which would be off by the
+      // NY<->Karachi offset for this column and make this panel miss real
+      // leave applications).
+      const startDate = businessStartOfDayAsStoredTimestamp(today);
+      const endDate = businessEndOfDayAsStoredTimestamp(today);
 
       const payload: GetVacationsPayload = {
         pagedListRequest: {

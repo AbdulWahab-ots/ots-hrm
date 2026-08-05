@@ -1,41 +1,55 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Bell } from "lucide-react";
+import { AppDispatch } from "@/store/store";
+import { fetchPayrolls } from "@/services/payrollService";
+import { nowBusiness } from "@/utils/timezone";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function PayrollStatus() {
-  const pendingAmount = 1813.164;
-  const employeesLeft = 10;
+  const dispatch = useDispatch<AppDispatch>();
+  const [pendingAmount, setPendingAmount] = useState(0);
+  const [employeesLeft, setEmployeesLeft] = useState(0);
+  const [paidCount, setPaidCount] = useState(0);
 
+  useEffect(() => {
+    const fetchStatus = async () => {
+      const now = nowBusiness();
+      try {
+        const res: any = await fetchPayrolls(dispatch, {
+          page: 1,
+          pageSize: 1000,
+          payrollYear: now.getFullYear(),
+          payrollMonth: now.getMonth() + 1,
+        });
+        const records: any[] = res?.result?.data ?? [];
+
+        const paid = records.filter((p) => p.status === "PAID");
+        const notPaid = records.filter((p) => p.status !== "PAID");
+
+        setPaidCount(paid.length);
+        setEmployeesLeft(notPaid.length);
+        setPendingAmount(
+          notPaid.reduce((sum, p) => sum + (Number(p.netSalary) || 0), 0)
+        );
+      } catch (error) {
+        console.error("Failed to fetch payroll status:", error);
+      }
+    };
+    fetchStatus();
+  }, [dispatch]);
+
+  const total = paidCount + employeesLeft;
   const data = {
     datasets: [
       {
-        data: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
-        backgroundColor: [
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#006bff",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-          "#fc0035",
-        ],
+        data: total > 0 ? [paidCount, employeesLeft] : [1],
+        backgroundColor: total > 0 ? ["#006bff", "#fc0035"] : ["#e5e7eb"],
         borderWidth: 8,
         borderColor: "#ffffff",
         borderRadius: 8,
@@ -64,7 +78,6 @@ export default function PayrollStatus() {
           <Doughnut
             data={data}
             options={options}
-            // width={360}
             className="lg:w-[360px] w-[300px]"
             height={185}
           />

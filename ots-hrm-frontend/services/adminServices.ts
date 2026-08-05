@@ -383,6 +383,32 @@ export const fetchAttendanceRecordsForRange = async (
   });
 };
 
+// Fetch aggregated attendance stats (present/absent/onLeave/etc counts) for a
+// date range, computed server-side and scoped to the caller's company - used by
+// dashboard summary cards.
+export const fetchAttendanceStatsForRange = async (
+  dispatch: AppDispatch,
+  startDate: string,
+  endDate: string
+): Promise<any> => {
+  return apiHandler(dispatch, "post", "/attendance/stats", {
+    data: {
+      pagedListRequest: { getAllRecords: true },
+      queryOptionsRequest: {
+        filtersRequest: [
+          {
+            field: "date",
+            operator: 1,
+            matchMode: 10,
+            rangeValues: { start: startDate, end: endDate },
+          },
+        ],
+      },
+    },
+    showSuccessToast: false,
+  });
+};
+
 // Fetch all Attendance api
 // export const fetchAllAttendance = async (dispatch: AppDispatch) => {
 //     const currentDate = new Date().toISOString().split("T")[0];
