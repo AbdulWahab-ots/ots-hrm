@@ -5,7 +5,7 @@ import { useDispatch } from "react-redux";
 import { ColumnDef } from "@tanstack/react-table";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { AppDispatch } from "@/store/store";
 import { TanstackTable } from "@/components/common/TanstackTable";
 import Button from "@/components/common/Button";
@@ -17,6 +17,7 @@ import DeleteConfirmationModal from "@/components/common/DeleteConfirmation";
 import {
   getAllAnnouncementsAPI,
   createAnnouncementAPI,
+  updateAnnouncementAPI,
   deleteAnnouncementAPI,
 } from "@/services/adminServices";
 
@@ -42,6 +43,7 @@ const AnnouncementsPage = () => {
   const [items, setItems] = useState<Announcement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [toEdit, setToEdit] = useState<Announcement | null>(null);
   const [toDelete, setToDelete] = useState<Announcement | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -116,7 +118,14 @@ const AnnouncementsPage = () => {
         id: "action",
         header: () => <div className="text-right">Actions</div>,
         cell: (info) => (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-1">
+            <button
+              aria-label="Edit announcement"
+              onClick={() => setToEdit(info.row.original)}
+              className="flex items-center justify-center w-9 h-9 rounded-[var(--g-radius-sm)] text-g-gray-800 hover:bg-g-blue-100 hover:text-g-blue-700 transition-colors focus-ring-geist"
+            >
+              <Pencil size={17} />
+            </button>
             <button
               aria-label="Delete announcement"
               onClick={() => setToDelete(info.row.original)}
@@ -205,6 +214,56 @@ const AnnouncementsPage = () => {
             </Form>
           )}
         </Formik>
+      </CustomModal>
+
+      {/* Edit modal */}
+      <CustomModal
+        isOpen={!!toEdit}
+        onClose={() => setToEdit(null)}
+        title="Edit Announcement"
+      >
+        {toEdit && (
+          <Formik
+            initialValues={{ title: toEdit.title, description: toEdit.description }}
+            validationSchema={Yup.object({
+              title: Yup.string().required("Title is required").max(255),
+              description: Yup.string().required("Description is required"),
+            })}
+            onSubmit={async (values, helpers) => {
+              const res = await updateAnnouncementAPI(dispatch, toEdit.id, values);
+              helpers.setSubmitting(false);
+              if (res) {
+                setToEdit(null);
+                await fetchItems();
+              }
+            }}
+          >
+            {({ isSubmitting }) => (
+              <Form className="flex flex-col gap-4 p-1">
+                <InputField label="Title" name="title" placeholder="e.g. Office closed on Friday" />
+                <TextArea
+                  label="Description"
+                  name="description"
+                  rows={4}
+                  placeholder="Write the announcement details…"
+                />
+                <div className="flex justify-end gap-3 mt-2">
+                  <Button
+                    label="Cancel"
+                    variant="outline"
+                    type="button"
+                    onClick={() => setToEdit(null)}
+                  />
+                  <Button
+                    label={isSubmitting ? "Saving…" : "Save"}
+                    type="submit"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </Form>
+            )}
+          </Formik>
+        )}
       </CustomModal>
 
       <DeleteConfirmationModal

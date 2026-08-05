@@ -722,6 +722,19 @@ export const createAnnouncementAPI = async (
   });
 };
 
+// Update an announcement (admin only).
+export const updateAnnouncementAPI = async (
+  dispatch: AppDispatch,
+  id: string,
+  payload: { title: string; description: string }
+) => {
+  return apiHandler(dispatch, "put", `/announcement/update/${id}`, {
+    data: payload,
+    successMessage: "Announcement updated",
+    showSuccessToast: true,
+  });
+};
+
 // Delete an announcement (admin only).
 export const deleteAnnouncementAPI = async (
   dispatch: AppDispatch,
