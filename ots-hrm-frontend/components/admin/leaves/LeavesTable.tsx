@@ -20,7 +20,7 @@ import { AdminVocationColumns } from "@/utils/Columns/AdminVocationColumns";
 import { getAllVacationsAPI } from "@/services/employeeService";
 import ManagementView from "./ManagementView";
 import CountBadge from "@/components/common/CountBadge";
-import { nowBusiness } from "@/utils/timezone";
+import { nowBusiness, businessStartOfDayUTC, businessEndOfDayUTC } from "@/utils/timezone";
 
 const VocationTable = () => {
   const [localData, setLocalData] = useState<Vocation[]>([]);
@@ -124,14 +124,6 @@ const VocationTable = () => {
     [dispatch]
   );
 
-  // Helper function to format date as local YYYY-MM-DD
-  const formatLocalDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   const buildFilters = (): QueryOptionsRequest => {
     const filters: QueryOptionsRequest = {
       filtersRequest: [],
@@ -152,8 +144,8 @@ const VocationTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          start: formatLocalDate(selectedRange.startDate),
-          end: formatLocalDate(selectedRange.endDate),
+          start: businessStartOfDayUTC(selectedRange.startDate),
+          end: businessEndOfDayUTC(selectedRange.endDate),
         },
       });
     }
@@ -188,39 +180,30 @@ const VocationTable = () => {
     //   });
     // }
 
-    // Apply time-based filter (daily, weekly, monthly, yearly)
+    // Apply time-based filter (daily, weekly, monthly, yearly). Each window is
+    // "N days back through today (inclusive)" - daily/weekly/monthly/yearly are
+    // strictly nested supersets of each other, so switching to a wider window can
+    // only add rows, never remove them. (The previous "weekly" implementation
+    // snapped to a fixed Sunday-aligned calendar week that could land entirely in
+    // the past relative to today, making it show FEWER rows than "daily" - backwards.)
     const now = nowBusiness();
     let startDate: Date | null = null;
     let endDate: Date | null = null;
 
     if (activeTimeFilter === "daily") {
       startDate = new Date(now);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 1);
-      endDate.setHours(0, 0, 0, 0);
-    } else if (activeTimeFilter === "weekly") {
-      const lastWeek = new Date(now);
-      lastWeek.setDate(now.getDate() - 5);
-      startDate = new Date(lastWeek);
-      startDate.setDate(startDate.getDate() - startDate.getDay());
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 7);
-      endDate.setHours(0, 0, 0, 0);
-    } else if (activeTimeFilter === "monthly") {
-      // Fetch data for the previous 30 days from the current date
       endDate = new Date(now);
-      endDate.setHours(23, 59, 59, 999);
+    } else if (activeTimeFilter === "weekly") {
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 6); // last 7 days, inclusive of today
+      endDate = new Date(now);
+    } else if (activeTimeFilter === "monthly") {
       startDate = new Date(now);
       startDate.setDate(now.getDate() - 30);
-      startDate.setHours(0, 0, 0, 0);
-    } else if (activeTimeFilter === "yearly") {
-      // Fetch data from the start of the current year to the current date
-      startDate = new Date(now.getFullYear(), 0, 1); // January 1st of the current year
-      startDate.setHours(0, 0, 0, 0);
       endDate = new Date(now);
-      endDate.setHours(23, 59, 59, 999);
+    } else if (activeTimeFilter === "yearly") {
+      startDate = new Date(now.getFullYear(), 0, 1); // January 1st of the current year
+      endDate = new Date(now);
     }
 
     if (startDate && endDate) {
@@ -229,8 +212,12 @@ const VocationTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          start: formatLocalDate(startDate),
-          end: formatLocalDate(endDate),
+          // createdAt is a real timestamp column - a bare "yyyy-MM-dd" string is
+          // ambiguous and gets parsed using the server's own OS timezone (not
+          // necessarily BUSINESS_TIMEZONE), silently shifting the range. These
+          // helpers resolve the correct absolute UTC instant instead.
+          start: businessStartOfDayUTC(startDate),
+          end: businessEndOfDayUTC(endDate),
         },
       });
     }
