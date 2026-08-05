@@ -1302,6 +1302,7 @@ export interface GetRequestsPayload {
       operator: number;
       matchMode: number;
       value?: string | boolean | number;
+      ignoreCase?: boolean;
       rangeValues?: { start: string; end: string };
     }>;
     sortRequest?: Array<{

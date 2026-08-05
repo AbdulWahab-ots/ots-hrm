@@ -26,7 +26,7 @@ interface Attendance {
   department: Department;
   type: "Check In" | "Check Out";
   time: string | null;
-  status: "Approved" | "Pending" | "Canceled";
+  status: "Approved" | "Pending" | "Rejected";
   reason: string | null;
   submittedDate?: string;
 }
@@ -46,7 +46,7 @@ const ManagementView: React.FC<ManagementViewProps> = ({
   const [historyData, setHistoryData] = useState<Attendance[]>([]);
   const [pendingData, setPendingData] = useState<Attendance[]>([]);
   const [actionStatus, setActionStatus] = useState<
-    "Approved" | "Canceled" | null
+    "Approved" | "Rejected" | null
   >(null);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [isRequestsLoading, setIsRequestsLoading] = useState(false);
@@ -85,7 +85,7 @@ const ManagementView: React.FC<ManagementViewProps> = ({
               ? "Approved"
               : request.status === "PENDING"
                 ? "Pending"
-                : "Canceled",
+                : "Rejected",
           reason: request.reason || null,
           submittedDate: request.date || "Submitted Yesterday",
         } as Attendance;
@@ -191,7 +191,7 @@ const ManagementView: React.FC<ManagementViewProps> = ({
     }
   }, [activeTab, fetchPendingForUser]);
 
-  const handleActionComplete = (status: "Approved" | "Canceled") => {
+  const handleActionComplete = (status: "Approved" | "Rejected") => {
     setActionStatus(status);
     onActionComplete?.();
     // Refresh both lists after an action
