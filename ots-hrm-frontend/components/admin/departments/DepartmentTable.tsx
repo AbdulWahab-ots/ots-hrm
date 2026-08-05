@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { ArrowUpToLine, Plus } from "lucide-react";
 import DeleteConfirmationModal from "../../common/DeleteConfirmation";
@@ -26,6 +25,10 @@ import { Department, GetDepartmentsPayload } from "@/utils/types";
 import { setIsLoading } from "@/store/features/global/globalSlice";
 import { departmentColumns } from "@/utils/departmentColumns";
 import CountBadge from "@/components/common/CountBadge";
+import {
+  businessStartOfDayAsStoredTimestamp,
+  businessEndOfDayAsStoredTimestamp,
+} from "@/utils/timezone";
 
 const DepartmentTable = () => {
   const [localData, setLocalData] = useState<Department[]>([]);
@@ -66,15 +69,9 @@ const DepartmentTable = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  const departmentOptions = [
-    { value: "IT Department", label: "IT Department" },
-    { value: "Human Resources", label: "Human Resources" },
-    { value: "Design", label: "Design" },
-    { value: "Marketing", label: "Marketing" },
-    { value: "Finance", label: "Finance" },
-    { value: "Customer Support", label: "Customer Support" },
-    { value: "Clinics", label: "Clinics" },
-  ];
+  const [departmentOptions, setDepartmentOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   const daysOfWeek = [
     "MONDAY",
@@ -156,6 +153,26 @@ const DepartmentTable = () => {
     [dispatch]
   );
 
+  const fetchDepartmentOptions = useCallback(async () => {
+    const payload: GetDepartmentsPayload = {
+      pagedListRequest: { pageNo: 1, pageSize: 1000, getAllRecords: true },
+      queryOptionsRequest: { filtersRequest: [], sortRequest: [], includes: [] },
+    };
+    try {
+      const response = await getAllDepartmentAPI(dispatch, payload);
+      if (response?.result) {
+        setDepartmentOptions(
+          response.result.data.map((department) => ({
+            value: department.name,
+            label: department.name,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch department options:", error);
+    }
+  }, [dispatch]);
+
   const handleDelete = async () => {
     try {
       setLocalIsLoading(true);
@@ -168,12 +185,14 @@ const DepartmentTable = () => {
         if (results.every((result) => result)) {
           const filters = buildFilters();
           fetchDepartments(currentPage, filters);
+          fetchDepartmentOptions();
         }
       } else if (departmentToDelete) {
         const success = await deleteDepartmentAPI(dispatch, departmentToDelete);
         if (success) {
           const filters = buildFilters();
           fetchDepartments(currentPage, filters);
+          fetchDepartmentOptions();
         }
       }
     } catch (error) {
@@ -207,8 +226,8 @@ const DepartmentTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          start: format(selectedRange.startDate, "yyyy-MM-dd"),
-          end: format(selectedRange.endDate, "yyyy-MM-dd"),
+          start: businessStartOfDayAsStoredTimestamp(selectedRange.startDate),
+          end: businessEndOfDayAsStoredTimestamp(selectedRange.endDate),
         },
       });
     }
@@ -226,7 +245,8 @@ const DepartmentTable = () => {
       filters.filtersRequest.push({
         field: "name",
         operator: 1,
-        matchMode: 1,
+        matchMode: 7,
+        ignoreCase: true,
         value: debouncedSearchTerm,
       });
     }
@@ -244,6 +264,10 @@ const DepartmentTable = () => {
     selectedRange,
     fetchDepartments,
   ]);
+
+  useEffect(() => {
+    fetchDepartmentOptions();
+  }, [fetchDepartmentOptions]);
 
   const handleOpenDateModal = () => setIsDateModalOpen(true);
   const handleCloseDateModal = () => setIsDateModalOpen(false);
@@ -329,6 +353,7 @@ const DepartmentTable = () => {
         setIsSuccessModalOpen(true);
         const filters = buildFilters();
         fetchDepartments(currentPage, filters);
+        fetchDepartmentOptions();
       }
     } catch (error) {
       // Error will be shown through other means (toast, etc.)

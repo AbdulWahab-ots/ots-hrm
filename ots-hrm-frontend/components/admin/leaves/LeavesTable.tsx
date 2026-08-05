@@ -20,7 +20,11 @@ import { AdminVocationColumns } from "@/utils/Columns/AdminVocationColumns";
 import { getAllVacationsAPI } from "@/services/employeeService";
 import ManagementView from "./ManagementView";
 import CountBadge from "@/components/common/CountBadge";
-import { nowBusiness, businessStartOfDayUTC, businessEndOfDayUTC } from "@/utils/timezone";
+import {
+  nowBusiness,
+  businessStartOfDayAsStoredTimestamp,
+  businessEndOfDayAsStoredTimestamp,
+} from "@/utils/timezone";
 
 const VocationTable = () => {
   const [localData, setLocalData] = useState<Vocation[]>([]);
@@ -144,8 +148,8 @@ const VocationTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          start: businessStartOfDayUTC(selectedRange.startDate),
-          end: businessEndOfDayUTC(selectedRange.endDate),
+          start: businessStartOfDayAsStoredTimestamp(selectedRange.startDate),
+          end: businessEndOfDayAsStoredTimestamp(selectedRange.endDate),
         },
       });
     }
@@ -212,12 +216,15 @@ const VocationTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          // createdAt is a real timestamp column - a bare "yyyy-MM-dd" string is
-          // ambiguous and gets parsed using the server's own OS timezone (not
-          // necessarily BUSINESS_TIMEZONE), silently shifting the range. These
-          // helpers resolve the correct absolute UTC instant instead.
-          start: businessStartOfDayUTC(startDate),
-          end: businessEndOfDayUTC(endDate),
+          // createdAt is a real timestamp column, but is populated via `new Date()`
+          // in backend app code and written into a `timestamp` (no time zone)
+          // column - Postgres silently drops the offset on insert, keeping only
+          // the server OS's (Asia/Karachi) wall-clock digits. These helpers
+          // re-express the business-day boundary in that same representation,
+          // rather than as a true UTC instant (which would be off by the
+          // NY<->Karachi offset for this column).
+          start: businessStartOfDayAsStoredTimestamp(startDate),
+          end: businessEndOfDayAsStoredTimestamp(endDate),
         },
       });
     }

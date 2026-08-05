@@ -22,27 +22,34 @@ export const nowBusiness = (): Date =>
 export const todayBusinessISO = (): string =>
   dayjs().tz(BUSINESS_TIMEZONE).format("YYYY-MM-DD");
 
-// Absolute-instant (real UTC, unambiguous) ISO strings for the start/end of the
-// calendar day `date` falls on, as that day is understood in BUSINESS_TIMEZONE.
-//
-// These exist specifically for filtering true `timestamp` columns (e.g.
-// Vacation.createdAt) via a Between range sent to the backend. Sending a bare
-// zone-less string like "2026-08-04T00:00:00.000" is NOT safe for that purpose —
-// the backend parses it using the server process's OWN OS timezone (which may not
-// be BUSINESS_TIMEZONE, or even UTC), silently shifting the range. `date` is
-// expected to be a "fake local Date" like nowBusiness() or a calendar date picked
-// in the UI — only its local Y/M/D getters are read here; its own underlying
-// instant/timezone is irrelevant. Filtering a `date`-typed column (no time
-// component, e.g. Attendance.date) doesn't need this — a bare "yyyy-MM-dd" string
-// is unambiguous there regardless of server timezone.
-export const businessStartOfDayUTC = (date: Date): string =>
+// The backend server process's OS timezone. `createdAt`/`modifiedAt` columns are
+// populated via `new Date()` in backend app code and written to `timestamp` (no time
+// zone) Postgres columns - Postgres silently drops any offset on insert for that
+// column type, so what actually lands in the DB is the Node process's LOCAL
+// wall-clock digits (Asia/Karachi), not a true UTC instant. Confirmed directly by
+// inspecting stored rows (e.g. a row created at true UTC ~17:49 read back as
+// "22:32" - exactly Karachi's +5 offset from UTC).
+const SERVER_OS_TIMEZONE = "Asia/Karachi";
+
+// Start/end of the BUSINESS_TIMEZONE calendar day `date` falls on, expressed as the
+// literal wall-clock string the DB would actually contain for an event at that real
+// instant - i.e. re-expressed in SERVER_OS_TIMEZONE, matching how `createdAt` is
+// really stored (see above). Use this whenever filtering a `timestamp` column such
+// as `createdAt` via Between() - a true-UTC instant would be off by the
+// NY<->Karachi offset for this specific class of columns and misclassify rows near
+// day boundaries. Filtering a `date`-typed column (no time component, e.g.
+// Attendance.date) doesn't need this — a bare "yyyy-MM-dd" string is unambiguous
+// there regardless of server timezone.
+export const businessStartOfDayAsStoredTimestamp = (date: Date): string =>
   dayjs
     .tz(`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`, "YYYY-M-D", BUSINESS_TIMEZONE)
     .startOf("day")
-    .toISOString();
+    .tz(SERVER_OS_TIMEZONE)
+    .format("YYYY-MM-DD HH:mm:ss.SSS");
 
-export const businessEndOfDayUTC = (date: Date): string =>
+export const businessEndOfDayAsStoredTimestamp = (date: Date): string =>
   dayjs
     .tz(`${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`, "YYYY-M-D", BUSINESS_TIMEZONE)
     .endOf("day")
-    .toISOString();
+    .tz(SERVER_OS_TIMEZONE)
+    .format("YYYY-MM-DD HH:mm:ss.SSS");

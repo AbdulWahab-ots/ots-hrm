@@ -5,7 +5,7 @@ import React, { useState } from "react";
 interface StatsCardProps {
   title: string;
   value: number;
-  change: string;
+  change?: string;
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({
@@ -61,9 +61,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         <span className="text-g-gray-1000 font-semibold text-3xl lg:text-[48px]">
           {value}
         </span>
-        <span className="ml-2 text-g-green-700 text-label-14">
-          {change}
-        </span>
+        {change && (
+          <span className="ml-2 text-g-green-700 text-label-14">
+            {change}
+          </span>
+        )}
       </div>
     </div>
   );

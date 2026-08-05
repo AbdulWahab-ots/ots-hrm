@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -13,13 +13,18 @@ import {
   ChartOptions,
   Chart,
 } from "chart.js";
-import { CircleAlert } from "lucide-react";
 import HeaderWithTooltip from "@/components/common/Typography/HeaderWithTooltip";
 import SegmentedTabs from "@/components/common/SegmentedTabs";
+import { Department } from "@/utils/types";
 
 const PERIOD_OPTIONS: { value: "year" | "month"; label: string }[] = [
   { value: "year", label: "Y" },
   { value: "month", label: "M" },
+];
+
+const MONTH_LABELS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 ChartJS.register(
@@ -31,53 +36,57 @@ ChartJS.register(
   Legend
 );
 
-const DepartmentPercentageChart: React.FC = () => {
+interface DepartmentPercentageChartProps {
+  departments: Department[];
+}
+
+const DepartmentPercentageChart: React.FC<DepartmentPercentageChartProps> = ({
+  departments,
+}) => {
   const chartRef = useRef<Chart<"bar">>(null);
   const [activeFilter, setActiveFilter] = useState<"year" | "month">("year");
-
-  // Sample data for different time filters
-  const filterData = {
-    year: {
-      labels: [
-        "IT",
-        "Human Resources",
-        "Design",
-        "Marketing",
-        "Finance",
-        "Customer Support",
-        "Clinics",
-      ],
-      data: [50, 75, 90, 50, 25, 60, 75],
-    },
-    month: {
-      labels: [
-        "IT",
-        "Human Resources",
-        "Design",
-        "Marketing",
-        "Finance",
-        "Customer Support",
-        "Clinics",
-      ],
-      data: [30, 60, 80, 40, 20, 90, 50],
-    },
-  };
 
   const handleFilterChange = (filter: "year" | "month") => {
     setActiveFilter(filter);
   };
 
-  // Dynamically set background color based on value
-  const getBackgroundColors = (data: number[]) => {
-    return data.map((value) => (value < 50 ? "#F97066" : "#32D583"));
-  };
+  // Real timeline of department creation: count of departments created per
+  // month (year view) or per week of the current month (month view).
+  const { labels, counts } = useMemo(() => {
+    const now = new Date();
+
+    if (activeFilter === "year") {
+      const buckets = new Array(12).fill(0);
+      departments.forEach((dept) => {
+        const created = new Date(dept.createdAt);
+        if (created.getFullYear() === now.getFullYear()) {
+          buckets[created.getMonth()] += 1;
+        }
+      });
+      return { labels: MONTH_LABELS, counts: buckets };
+    }
+
+    const weekLabels = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
+    const buckets = new Array(5).fill(0);
+    departments.forEach((dept) => {
+      const created = new Date(dept.createdAt);
+      if (
+        created.getFullYear() === now.getFullYear() &&
+        created.getMonth() === now.getMonth()
+      ) {
+        const weekIndex = Math.min(Math.floor((created.getDate() - 1) / 7), 4);
+        buckets[weekIndex] += 1;
+      }
+    });
+    return { labels: weekLabels, counts: buckets };
+  }, [departments, activeFilter]);
 
   const data: ChartData<"bar"> = {
-    labels: filterData[activeFilter].labels,
+    labels,
     datasets: [
       {
-        data: filterData[activeFilter].data,
-        backgroundColor: getBackgroundColors(filterData[activeFilter].data),
+        data: counts,
+        backgroundColor: "#32D583",
         borderColor: "#fff",
         borderWidth: 1,
         barPercentage: 0.5,
@@ -85,6 +94,8 @@ const DepartmentPercentageChart: React.FC = () => {
       },
     ],
   };
+
+  const maxCount = Math.max(1, ...counts);
 
   const options: ChartOptions<"bar"> = {
     responsive: true,
@@ -94,18 +105,18 @@ const DepartmentPercentageChart: React.FC = () => {
       tooltip: {
         enabled: true,
         callbacks: {
-          label: (context) => `${context.parsed.y}%`,
+          label: (context) =>
+            `${context.parsed.y} department${context.parsed.y === 1 ? "" : "s"}`,
         },
       },
     },
     scales: {
       y: {
         beginAtZero: true,
-        max: 100,
+        max: maxCount,
         ticks: {
           color: "#7782AE",
-          stepSize: 25,
-          callback: (value) => `${value}`,
+          precision: 0,
         },
         border: { display: false },
         grid: { color: "rgba(0, 0, 0, 0.05)" },
@@ -117,12 +128,12 @@ const DepartmentPercentageChart: React.FC = () => {
     },
     elements: {
       bar: {
-        borderRadius: 8, // Top radius for bars
+        borderRadius: 8,
       },
     },
     datasets: {
       bar: {
-        barThickness: 21, // Fixed bar width of 21px
+        barThickness: 21,
       },
     },
   };

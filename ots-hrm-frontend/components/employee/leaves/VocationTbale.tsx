@@ -27,7 +27,10 @@ import { setIsLoading } from "@/store/features/global/globalSlice";
 import { vocationColumns } from "@/utils/Columns/vocationColumns";
 import { getAllVacationsAPI } from "@/services/employeeService";
 import CountBadge from "@/components/common/CountBadge";
-import { businessStartOfDayUTC, businessEndOfDayUTC } from "@/utils/timezone";
+import {
+  businessStartOfDayAsStoredTimestamp,
+  businessEndOfDayAsStoredTimestamp,
+} from "@/utils/timezone";
 
 const VocationTable = () => {
   const [localData, setLocalData] = useState<Vocation[]>([]);
@@ -172,13 +175,15 @@ const VocationTable = () => {
         operator: 1,
         matchMode: 10,
         rangeValues: {
-          // createdAt is a full timestamp column, not a bare date. A bare "yyyy-MM-dd"
-          // string is ambiguous - the backend parses it using the SERVER's own OS
-          // timezone (not necessarily BUSINESS_TIMEZONE or even UTC), which can shift
-          // the range by hours and make it match nothing. These helpers resolve the
-          // correct absolute UTC instant for start/end of day in BUSINESS_TIMEZONE.
-          start: businessStartOfDayUTC(selectedRange.startDate),
-          end: businessEndOfDayUTC(selectedRange.endDate),
+          // createdAt is a full timestamp column, but is populated via `new Date()`
+          // in backend app code and written into a `timestamp` (no time zone)
+          // column - Postgres silently drops the offset on insert, keeping only
+          // the server OS's (Asia/Karachi) wall-clock digits. These helpers
+          // re-express the business-day boundary in that same representation,
+          // rather than as a true UTC instant (which would be off by the
+          // NY<->Karachi offset for this column).
+          start: businessStartOfDayAsStoredTimestamp(selectedRange.startDate),
+          end: businessEndOfDayAsStoredTimestamp(selectedRange.endDate),
         },
       });
     }

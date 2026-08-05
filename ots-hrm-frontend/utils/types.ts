@@ -382,6 +382,7 @@ export interface GetDepartmentsPayload {
       operator: number;
       matchMode: number;
       value?: any;
+      ignoreCase?: boolean;
       rangeValues?: {
         start: string;
         end: string;
@@ -783,6 +784,7 @@ export interface GetDepartmentsPayload {
       operator: number;
       matchMode: number;
       value?: any;
+      ignoreCase?: boolean;
       rangeValues?: {
         start: string;
         end: string;
