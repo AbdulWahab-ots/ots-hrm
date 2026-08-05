@@ -34,6 +34,7 @@ import { AnnouncementService } from "../announcement-service";
 import { NotificationService } from "../notification-service";
 import { TaxCalculatorService } from "../tax-calculator-service";
 import { AttendanceSummaryService } from "../attendance-summary-service";
+import { EmployeeMilestoneService } from "../employee-milestone-service";
 
 export const registerServices = (container: DependencyContainer) => {
     container.register<CompanyService>('CompanyService', CompanyService);
@@ -53,6 +54,7 @@ export const registerServices = (container: DependencyContainer) => {
     container.register<LeaveTypeService>('LeaveTypeService', LeaveTypeService);
     container.register<PublicHolidayService>('PublicHolidayService', PublicHolidayService);
     container.register<EmployeeService>('EmployeeService', EmployeeService);
+    container.register<EmployeeMilestoneService>('EmployeeMilestoneService', EmployeeMilestoneService);
     container.register<AttendanceService>('AttendanceService', AttendanceService);
     container.register<AttendanceBreakService>('AttendanceBreakService', AttendanceBreakService);
     container.register<VacationService>('VacationService', VacationService);

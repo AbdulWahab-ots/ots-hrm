@@ -370,6 +370,7 @@ export const EmployeeValidationSchema = [
     designationId: Yup.string().required("Designation is required"),
     shiftId: Yup.string().required("Shift is required"),
     joiningDate: Yup.string().required("Joining date is required"),
+    dateOfBirth: Yup.string().optional(),
     status: Yup.string().required("Status is required"),
   }),
   // Step 2: Benefits Selection
@@ -414,6 +415,7 @@ export const EmployeeEditValidationSchema = [
     designationId: Yup.string().required("Designation is required"),
     shiftId: Yup.string().required("Shift is required"),
     joiningDate: Yup.string().required("Joining date is required"),
+    dateOfBirth: Yup.string().optional(),
     status: Yup.string().required("Status is required"),
   }),
   EmployeeValidationSchema[1],

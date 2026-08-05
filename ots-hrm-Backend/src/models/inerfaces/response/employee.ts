@@ -29,6 +29,7 @@ export interface IEmployeeResponse extends ICompanyResponseBase {
     emergencyContact?: string;
     probationEndDate?: Date;
     departureDate?: Date | null;
+    dateOfBirth?: Date | null;
     user?: IUserResponse;
     department?: IDepartmentResponse;
     designation?: IDesignationResponse; 

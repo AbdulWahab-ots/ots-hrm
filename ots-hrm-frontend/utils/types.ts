@@ -919,6 +919,7 @@ export interface EmployeePayload {
   designationId: string;
   shiftId: string;
   joiningDate: string;
+  dateOfBirth?: string;
   status: string;
   benefitId: string; // Single benefit ID as per payload
   benefits?: EmployeeBenefitInput[]; // New optional benefits array for API
@@ -949,6 +950,7 @@ export interface Employee {
   designationId: string;
   shiftId: string;
   joiningDate: string;
+  dateOfBirth?: string | null;
   salary: number | null;
   status: string;
   phoneNumber: string | null;

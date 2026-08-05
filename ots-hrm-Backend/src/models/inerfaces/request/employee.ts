@@ -16,6 +16,7 @@ export interface IEmployeeRequest {
     emergencyContact?: string;
     probationEndDate?: Date;
     departureDate?: Date;
+    dateOfBirth?: Date;
     shiftId?: string; // Optional shift assignment
     user: IDefaultUserRequest;
     benefits?: IEmployeeBenefitRequest[];

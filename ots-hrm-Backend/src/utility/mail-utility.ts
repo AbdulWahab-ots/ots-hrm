@@ -259,6 +259,64 @@ export const sendLateArrivalAdminEmail = async (
   });
 };
 
+// Send a "Happy Birthday" note to the employee themselves. Reuses the same
+// header/body styling as the other transactional templates for visual consistency.
+export const sendBirthdayEmployeeEmail = async (
+  to: string,
+  data: { name: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: 'Happy Birthday! — OTS HRM',
+    template: 'birthday-employee',
+    data,
+    text: `Dear ${data.name},\n\nWishing you a very happy birthday! We hope your day is filled with joy and good celebration.\n\nThank you for being a valued part of our team - we're glad to have you with us.\n\nRegards,\nOrange Tree Systems (OTS) HR Team`,
+  });
+};
+
+// Notify a company admin/HR user that today is an employee's birthday.
+export const sendBirthdayAdminEmail = async (
+  to: string,
+  data: { employeeName: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: `Employee Birthday Today — ${data.employeeName}`,
+    template: 'birthday-admin',
+    data,
+    text: `Dear HR Team,\n\nToday is ${data.employeeName}'s birthday.\n\nConsider reaching out to help celebrate their day!\n\nRegards,\nOTS HRM System`,
+  });
+};
+
+// Send a "Happy Work Anniversary" note to the employee themselves. `ordinal` is a
+// pre-formatted string like "3rd" (see formatOrdinal in string-utility.ts).
+export const sendAnniversaryEmployeeEmail = async (
+  to: string,
+  data: { name: string; ordinal: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: 'Happy Work Anniversary! — OTS HRM',
+    template: 'anniversary-employee',
+    data,
+    text: `Dear ${data.name},\n\nCongratulations on celebrating your ${data.ordinal} year with us!\n\nThank you for your continued dedication and the contributions you've made along the way. We're grateful to have you on the team.\n\nRegards,\nOrange Tree Systems (OTS) HR Team`,
+  });
+};
+
+// Notify a company admin/HR user that today is an employee's Nth work anniversary.
+export const sendAnniversaryAdminEmail = async (
+  to: string,
+  data: { employeeName: string; ordinal: string }
+): Promise<boolean> => {
+  return sendMail({
+    to,
+    subject: `Employee Work Anniversary Today — ${data.employeeName}`,
+    template: 'anniversary-admin',
+    data,
+    text: `Dear HR Team,\n\nToday marks ${data.employeeName}'s ${data.ordinal} work anniversary with the company.\n\nConsider reaching out to congratulate them!\n\nRegards,\nOTS HRM System`,
+  });
+};
+
 // Send invite email
 export const sendInviteEmail = async (
   to: string, 

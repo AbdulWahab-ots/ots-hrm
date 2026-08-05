@@ -4,8 +4,9 @@ import { ControllerBase } from "./generics/controller-base";
 import { CommonRoutes } from "../constants/commonRoutes";
 import { IFetchRequest, IFilter, IEmployeeRequest, IEmployeeResponse, IGetSingleRecordFilter} from "../models";
 import { ExtendedRequest } from "../models/inerfaces/extended-Request";
-import { EmployeeService } from "../bl";
+import { EmployeeService, EmployeeMilestoneService } from "../bl";
 import { authorize, validateCompanyHeader } from "../middlewares/authentication";
+import { requireAdminAccess } from "../middlewares/permissions";
 import { payloadValidator, bodyValidator, queryValidator, paramsValidator } from "../middlewares/payload-validator";
 import { uuidParamSchema, createEmployeeSchema, updateEmployeeSchema, resignEmployeeSchema } from "../models/payload-schemas";
 import { AppResponse } from "../utility";
@@ -13,7 +14,10 @@ import { AppResponse } from "../utility";
 
 @injectable()
 export class EmployeeController extends ControllerBase {
-    constructor(@inject('EmployeeService') private readonly employeeService: EmployeeService){
+    constructor(
+        @inject('EmployeeService') private readonly employeeService: EmployeeService,
+        @inject('EmployeeMilestoneService') private readonly employeeMilestoneService: EmployeeMilestoneService
+    ){
         super('/employee');
         this.middleware = [authorize, validateCompanyHeader] as preHandlerHookHandler[];
         this.endPoints = [
@@ -69,6 +73,12 @@ export class EmployeeController extends ControllerBase {
                 method: 'GET',
                 path: `next-code`,
                 handler: this.getNextEmployeeCode as RouteHandlerMethod
+            },
+            {
+                method: 'POST',
+                path: `trigger-milestone-check`,
+                middlewares: [requireAdminAccess()],
+                handler: this.triggerMilestoneCheck as RouteHandlerMethod
             },
             {
                 method: 'GET',
@@ -201,6 +211,22 @@ export class EmployeeController extends ControllerBase {
                 AppResponse.success(
                     "Fetched next employee code successfully",
                     { code: await this.employeeService.getNextEmployeeCode(request.user) }
+                )
+            );
+        }
+    }
+
+    // Manual test/backfill trigger for the daily birthday/work-anniversary check,
+    // scoped to the calling admin's own company only (the automatic cron covers every
+    // company; a company admin has no business forcing a check on other tenants).
+    private triggerMilestoneCheck = async (req: FastifyRequest, res: FastifyReply) => {
+        let request = req as ExtendedRequest;
+
+        if (request.user) {
+            res.send(
+                AppResponse.success(
+                    "Milestone check completed successfully",
+                    await this.employeeMilestoneService.checkAndNotifyForCompany(request.user.companyId, request.user)
                 )
             );
         }

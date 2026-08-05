@@ -47,6 +47,21 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
     @Column({ type: 'date', nullable: true })
     departureDate?: Date | null;
 
+    // Optional - used for the Birthday notification feature (month+day recurrence).
+    @Column({ type: 'date', nullable: true })
+    dateOfBirth?: Date | null;
+
+    // Business-timezone year the birthday/anniversary cron last notified for this
+    // employee - comparing against the current year (not a boolean) is what lets the
+    // dedup reset itself automatically every year with no separate cleanup. Internal
+    // bookkeeping only - never exposed via toResponse(), same as
+    // Company.lastEmployeeCodeNumber.
+    @Column({ type: 'int', nullable: true })
+    lastBirthdayNotifiedYear?: number | null;
+
+    @Column({ type: 'int', nullable: true })
+    lastAnniversaryNotifiedYear?: number | null;
+
     // Employee Status
     @Column({ 
         type: 'enum', 
@@ -143,6 +158,7 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
             emergencyContact: entity.emergencyContact,
             probationEndDate: entity.probationEndDate,
             departureDate: entity.departureDate,
+            dateOfBirth: entity.dateOfBirth,
             bankName: entity.bankName,
             accountNumber: entity.accountNumber,
             ibanNumber: entity.ibanNumber,
@@ -171,6 +187,7 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
         this.emergencyContact = requestEntity.emergencyContact;
         this.probationEndDate = requestEntity.probationEndDate;
         this.departureDate = requestEntity.departureDate;
+        this.dateOfBirth = requestEntity.dateOfBirth;
         this.bankName = requestEntity.bankName;
         this.accountNumber = requestEntity.accountNumber;
         this.ibanNumber = requestEntity.ibanNumber;
@@ -216,6 +233,35 @@ export class Employee extends CompanyEntityBase implements IToResponseBase<Emplo
         const oneYearAfterJoining = new Date(this.joiningDate);
         oneYearAfterJoining.setFullYear(oneYearAfterJoining.getFullYear() + 1);
         return asOf >= oneYearAfterJoining;
+    }
+
+    // Whole years elapsed since joining, as of `asOf` - the work-anniversary ordinal
+    // (1st, 2nd, 3rd...). Same calendar-based arithmetic as hasCompletedOneYear(),
+    // just expressed as a count rather than a boolean.
+    getYearsOfService(asOf: Date = new Date()): number {
+        const joining = new Date(this.joiningDate);
+        let years = asOf.getFullYear() - joining.getFullYear();
+        const anniversaryThisYear = new Date(joining);
+        anniversaryThisYear.setFullYear(asOf.getFullYear());
+        if (asOf < anniversaryThisYear) years--;
+        return Math.max(0, years);
+    }
+
+    // True if `date`'s month+day matches `asOf`'s month+day, independent of year -
+    // the shared recurrence rule behind both birthdays and work anniversaries.
+    private static matchesMonthDay(date: Date, asOf: Date): boolean {
+        return date.getMonth() === asOf.getMonth() && date.getDate() === asOf.getDate();
+    }
+
+    isBirthdayToday(asOf: Date = new Date()): boolean {
+        if (!this.dateOfBirth) return false;
+        return Employee.matchesMonthDay(new Date(this.dateOfBirth), asOf);
+    }
+
+    // Requires at least one full year of service so the hire date itself is never
+    // misreported as a "0th anniversary".
+    isAnniversaryToday(asOf: Date = new Date()): boolean {
+        return Employee.matchesMonthDay(new Date(this.joiningDate), asOf) && this.getYearsOfService(asOf) >= 1;
     }
 
     // Enhanced onStatusChange method with better logging

@@ -94,6 +94,7 @@ const CreateEmployee = ({
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [isDobModalOpen, setIsDobModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const formikRef = useRef<FormikProps<EmployeePayload>>(null);
 
@@ -165,6 +166,7 @@ const CreateEmployee = ({
     // Defaults to today for a new hire (the common case) — editing an existing
     // employee overrides this via ...initialValues below with their actual stored date.
     joiningDate: isEdit ? "" : format(new Date(), "yyyy-MM-dd"),
+    dateOfBirth: "",
     status: "PERMANENT",
     benefitId: "",
     benefits: [],
@@ -491,6 +493,43 @@ const CreateEmployee = ({
                           </div>
                         )}
                       </div>
+                      <div>
+                        <label className="text-g-gray-900 text-label-14 font-medium block mb-2">
+                          Date of Birth
+                        </label>
+                        <div
+                          className={`
+                            block w-full px-[14px] py-[10px]
+                            border border-g-gray-alpha-400 rounded-[var(--g-radius-md)] focus-ring-geist
+                            focus:outline-none transition-all duration-200 cursor-pointer
+                            ${touched.dateOfBirth && errors.dateOfBirth
+                              ? "border-g-red-600 shadow-[0_0_0_4px_var(--g-red-100)]"
+                              : ""
+                            }
+                          `}
+                          onClick={() => setIsDobModalOpen(true)}
+                        >
+                          {values.dateOfBirth || "Select Date of Birth"}
+                        </div>
+                        {touched.dateOfBirth && errors.dateOfBirth && (
+                          <div className="flex items-center mt-1 text-g-red-700">
+                            <svg
+                              className="h-4 w-4 mr-1"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span className="text-xs">
+                              {errors.dateOfBirth}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                       <CustomDropdown
                         id="status"
                         name="status"
@@ -647,6 +686,23 @@ const CreateEmployee = ({
                   initialRange={{
                     startDate: values.joiningDate
                       ? new Date(values.joiningDate)
+                      : null,
+                    endDate: null,
+                  }}
+                  singleDateMode={true}
+                />
+                <DateRangePickerModal
+                  isOpen={isDobModalOpen}
+                  onClose={() => setIsDobModalOpen(false)}
+                  onSave={(range) => {
+                    setFieldValue(
+                      "dateOfBirth",
+                      range.startDate ? format(range.startDate, "yyyy-MM-dd") : ""
+                    );
+                  }}
+                  initialRange={{
+                    startDate: values.dateOfBirth
+                      ? new Date(values.dateOfBirth)
                       : null,
                     endDate: null,
                   }}

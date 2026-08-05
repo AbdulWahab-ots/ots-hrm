@@ -17,6 +17,7 @@ export * from './assessment-service';
 export * from './leave-type-service';
 export * from './public-holiday-service';
 export * from './employee-service';
+export * from './employee-milestone-service';
 export * from './attendance-service';
 export * from './attendance-break-service';
 export * from './vacation-service';
