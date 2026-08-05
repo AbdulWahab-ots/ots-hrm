@@ -49,7 +49,7 @@ export const fetchPayrolls = (dispatch: AppDispatch, params: PayrollListParams =
           { field: "payrollYear", direction: 1, priority: 1 },
           { field: "payrollMonth", direction: 1, priority: 2 },
         ],
-        includes: ["user", "employee", "employee.user", "department", "adjustments"],
+        includes: ["user", "employee", "employee.user", "employee.designation", "department", "adjustments"],
       },
     },
   });

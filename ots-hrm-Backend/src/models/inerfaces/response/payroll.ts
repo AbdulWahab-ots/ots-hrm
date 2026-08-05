@@ -23,6 +23,10 @@ export interface IPayrollResponse extends IResponseBase {
     employee?: {
         id: string;
         employeeCode: string;
+        designation?: {
+            id: string;
+            title: string;
+        };
         user?: {
             id: string;
             firstName: string;

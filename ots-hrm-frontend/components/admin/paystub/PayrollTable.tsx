@@ -66,7 +66,7 @@ export function payrollToRow(p: any): Payroll {
     employee: {
       id: p.employeeId ?? "",
       name: name || "—",
-      designation: p.employee?.employeeCode ?? "", // ponytail: employeeCode in the designation slot; join the designation relation server-side only if the product needs the title here.
+      designation: p.employee?.designation?.title ?? "",
     },
     department: { id: p.departmentId ?? "", name: p.department?.name ?? "—" },
     month: `${p.payrollYear}-${String(p.payrollMonth).padStart(2, "0")}`,

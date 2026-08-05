@@ -158,6 +158,10 @@ export class Payroll extends CompanyEntityBase implements IToResponseBase<Payrol
             employee: payroll.employee ? {
                 id: payroll.employee.id,
                 employeeCode: payroll.employee.employeeCode,
+                designation: payroll.employee.designation ? {
+                    id: payroll.employee.designation.id,
+                    title: payroll.employee.designation.title
+                } : undefined,
                 user: payroll.employee.user ? {
                     id: payroll.employee.user.id,
                     firstName: payroll.employee.user.firstName,
